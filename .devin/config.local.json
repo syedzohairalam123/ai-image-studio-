@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Exec(git status)",
+      "Exec(curl)",
+      "Exec(Accept)",
+      "Exec(gh)",
+      "Exec(git remote)",
+      "Exec(git fetch)",
+      "Exec(git add)",
+      "Exec(git commit)",
+      "Exec(git branch)",
+      "Exec(git push)"
+    ]
+  }
+}
