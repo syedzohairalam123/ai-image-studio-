@@ -1,0 +1,28 @@
+Flask==3.1.1
+Flask-SQLAlchemy==3.1.1
+Flask-Migrate==4.1.0
+Flask-Login==0.6.3
+python-dotenv==1.1.0
+marshmallow==3.26.1
+Werkzeug==3.1.3
+gunicorn==23.0.0
+
+# Image processing
+Pillow>=10.0.0
+numpy>=1.24.0
+scipy>=1.10.0
+opencv-python-headless>=4.8.0
+
+# Real AI image generation (Pollinations.ai provider)
+requests>=2.31.0
+
+# Background removal (optional)
+rembg>=2.0.50
+onnxruntime>=1.16.0
+
+# Share-link QR codes
+qrcode[pil]>=7.4
+
+# Testing
+pytest>=8.0.0
+pytest-flask>=1.3.0

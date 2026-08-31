@@ -1,0 +1,6 @@
+[tool.vercel]
+entrypoint = "run:app"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
