@@ -127,6 +127,10 @@ def create_app(config_class=None):
     # Import models so they are known to SQLAlchemy
     with flask_app.app_context():
         import app.models  # noqa: F401
+        # On Vercel (serverless), migrations can't run — auto-create all
+        # tables so the app boots cleanly on every cold start.
+        if os.environ.get("VERCEL"):
+            db.create_all()
 
     # Register error handlers
     register_error_handlers(flask_app)

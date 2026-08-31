@@ -1,0 +1,15 @@
+.git
+__pycache__
+*.pyc
+tests/
+.devin/
+instance/
+uploads/
+migrations/
+*.db
+*.sqlite3
+.env
+.env.*
+.pytest_cache/
+venv/
+.venv/

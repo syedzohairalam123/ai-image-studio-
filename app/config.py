@@ -12,7 +12,11 @@ class Config:
     """Base configuration."""
 
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-production")
-    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL", f"sqlite:///{BASE_DIR / 'ai_studio.db'}")
+    # On Vercel (serverless), only /tmp is writable. Use DATABASE_URL env
+    # var for a real database (Postgres, etc.) in production. Fall back to
+    # /tmp/ai_studio.db for ephemeral SQLite on Vercel cold starts.
+    _default_db = "sqlite:////tmp/ai_studio.db" if os.environ.get("VERCEL") else f"sqlite:///{BASE_DIR / 'ai_studio.db'}"
+    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL", _default_db)
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     AI_PROVIDER = os.environ.get("AI_PROVIDER", "stub")
@@ -28,7 +32,9 @@ class Config:
     PILLOW_UPSCALE_MULTI_PASS = os.environ.get("PILLOW_UPSCALE_MULTI_PASS", "true").lower() == "true"
 
     MAX_CONTENT_LENGTH = int(os.environ.get("MAX_CONTENT_LENGTH", 10 * 1024 * 1024))  # 10MB
-    UPLOAD_FOLDER = str(BASE_DIR / os.environ.get("UPLOAD_FOLDER", "uploads"))
+    # On Vercel only /tmp is writable
+    _default_upload = "/tmp/uploads" if os.environ.get("VERCEL") else str(BASE_DIR / os.environ.get("UPLOAD_FOLDER", "uploads"))
+    UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER_OVERRIDE", _default_upload)
 
     LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
 
