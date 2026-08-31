@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Profile — AI Studio{% endblock %}
+
+{% block content %}
+<div style="max-width:640px;">
+  <h3 style="margin-bottom:var(--space-6);">Profile Settings</h3>
+
+  <!-- Profile Info -->
+  <div class="card" style="margin-bottom:var(--space-6);">
+    <div class="card-header">
+      <h4 class="card-title">Account Information</h4>
+    </div>
+    <div class="card-body">
+      <form method="POST" action="/profile" class="auth-form" novalidate>
+        <div class="form-group">
+          <label class="form-label" for="email">Email</label>
+          <input type="email" id="email" class="input" value="{{ current_user.email }}" disabled>
+          <div class="form-hint">Email cannot be changed.</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="username">Username</label>
+          <input type="text" id="username" name="username" class="input {% if errors and errors.username %}input-error{% endif %}"
+                 value="{{ data.username if data else current_user.username }}" required>
+          {% if errors and errors.username %}<div class="field-error">{{ errors.username }}</div>{% endif %}
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Member since</label>
+          <input type="text" class="input" value="{{ current_user.created_at.strftime('%B %d, %Y') }}" disabled>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Password -->
+  <div class="card" style="margin-bottom:var(--space-6);">
+    <div class="card-header">
+      <h4 class="card-title">Change Password</h4>
+    </div>
+    <div class="card-body">
+      <a href="/profile/password" class="btn btn-secondary">Change Password</a>
+    </div>
+  </div>
+
+  <!-- Danger Zone -->
+  <div class="card" style="border-color:var(--danger-500);">
+    <div class="card-header">
+      <h4 class="card-title" style="color:var(--danger-600);">Danger Zone</h4>
+    </div>
+    <div class="card-body">
+      <p class="text-sm text-muted">Account deletion will be available in a future update.</p>
+    </div>
+  </div>
+
+  <!-- Logout -->
+  <div style="margin-top:var(--space-6);">
+    <form method="POST" action="/logout">
+      <button type="submit" class="btn btn-ghost" style="color:var(--danger-600);">Sign Out</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

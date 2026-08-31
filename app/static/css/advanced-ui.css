@@ -1,0 +1,727 @@
+/* ============================================================
+   ADVANCED UI.CSS — Advanced Interactive Styles
+   ============================================================ */
+
+/* ---- Advanced Drag and Drop ---- */
+[data-dropzone] {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+[data-dropzone].drag-over {
+  background: var(--brand-50);
+  border-color: var(--brand-500) !important;
+  transform: scale(1.02);
+}
+
+[data-dropzone].drag-over::after {
+  content: 'Drop here';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-weight: var(--weight-semibold);
+  color: var(--brand-600);
+  pointer-events: none;
+}
+
+[data-draggable] {
+  cursor: grab;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+[data-draggable]:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+[data-draggable].dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+  transform: scale(1.05);
+}
+
+/* ---- Advanced Image Viewer ---- */
+[data-image-viewer] {
+  position: relative;
+  overflow: hidden;
+  cursor: grab;
+  border-radius: var(--radius-lg);
+  background: var(--bg-tertiary);
+}
+
+[data-image-viewer]:active {
+  cursor: grabbing;
+}
+
+[data-image-viewer] img {
+  transition: transform 0.1s ease-out;
+  max-width: 100%;
+  height: auto;
+}
+
+[data-image-viewer].zoomed {
+  cursor: grab;
+}
+
+.image-viewer-controls {
+  position: absolute;
+  bottom: var(--space-4);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: var(--space-2);
+  background: rgba(0, 0, 0, 0.7);
+  padding: var(--space-2);
+  border-radius: var(--radius-full);
+  backdrop-filter: blur(10px);
+}
+
+.image-viewer-controls button {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+}
+
+.image-viewer-controls button:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* ---- Advanced Toast Notifications ---- */
+.toast-container.advanced {
+  position: fixed;
+  top: var(--space-4);
+  right: var(--space-4);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 400px;
+}
+
+.toast-advanced {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 300px;
+  transform: translateX(120%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toast-advanced.toast-enter {
+  transform: translateX(0);
+}
+
+.toast-advanced.toast-exit {
+  transform: translateX(120%);
+  opacity: 0;
+}
+
+.toast-content {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.toast-icon {
+  font-size: 20px;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.toast-message {
+  flex: 1;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  color: var(--text-tertiary);
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+}
+
+.toast-close:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.toast-actions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-light);
+}
+
+.toast-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: var(--brand-500);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  animation: toastProgress linear forwards;
+}
+
+@keyframes toastProgress {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
+/* ---- Advanced Modal ---- */
+.modal-overlay .modal.modal-animate-in {
+  animation: modalSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modal-overlay .modal.modal-animate-out {
+  animation: modalSlideOut 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes modalSlideOut {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95) translateY(-20px);
+  }
+}
+
+/* ---- Advanced Form Validation ---- */
+.field-error {
+  color: var(--danger-600);
+  font-size: var(--text-xs);
+  margin-top: var(--space-1);
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+input.error, 
+textarea.error, 
+select.error {
+  border-color: var(--danger-500) !important;
+  animation: shake 0.3s ease;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+input.success, 
+textarea.success, 
+select.success {
+  border-color: var(--success-500) !important;
+}
+
+/* ---- Advanced Loading States ---- */
+.advanced-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-6);
+}
+
+.advanced-loader.loader-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  z-index: 10;
+}
+
+[data-theme="dark"] .advanced-loader.loader-overlay {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.loader-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border-light);
+  border-top-color: var(--brand-500);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loader-text {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  font-weight: var(--weight-medium);
+}
+
+.advanced-loader.loader-exit {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+/* ---- Advanced Animations ---- */
+[data-animate] {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+[data-animate].animate-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Animation presets */
+[data-animate="fadeIn"] {
+  animation: fadeIn 0.6s ease forwards;
+}
+
+[data-animate="slideUp"] {
+  animation: slideUp 0.6s ease forwards;
+}
+
+[data-animate="slideDown"] {
+  animation: slideDown 0.6s ease forwards;
+}
+
+[data-animate="scaleIn"] {
+  animation: scaleIn 0.4s ease forwards;
+}
+
+[data-animate="bounce"] {
+  animation: bounce 0.6s ease forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-10px);
+  }
+  60% {
+    transform: translateY(-5px);
+  }
+}
+
+/* ---- Advanced Search/Filter ---- */
+.search-highlight {
+  background: var(--brand-200);
+  color: var(--text-primary);
+  padding: 0 2px;
+  border-radius: 2px;
+  font-weight: var(--weight-semibold);
+}
+
+[data-theme="dark"] .search-highlight {
+  background: var(--brand-800);
+}
+
+/* ---- Advanced Grid/Table ---- */
+[data-sortable-grid] [data-sort] {
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s ease;
+}
+
+[data-sortable-grid] [data-sort]:hover {
+  background: var(--bg-tertiary);
+}
+
+[data-sortable-grid] [data-sort]::after {
+  content: '↕';
+  position: absolute;
+  right: var(--space-2);
+  opacity: 0.3;
+  font-size: 12px;
+}
+
+[data-sortable-grid] [data-sort][data-sort-dir="asc"]::after {
+  content: '↑';
+  opacity: 1;
+  color: var(--brand-600);
+}
+
+[data-sortable-grid] [data-sort][data-sort-dir="desc"]::after {
+  content: '↓';
+  opacity: 1;
+  color: var(--brand-600);
+}
+
+.column-resizer {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.2s ease;
+}
+
+.column-resizer:hover,
+.column-resizer:active {
+  background: var(--brand-500);
+}
+
+/* ---- Keyboard Shortcuts Help ---- */
+.keyboard-shortcuts-help {
+  max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.shortcut-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.shortcut-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.shortcut-item:last-child {
+  border-bottom: none;
+}
+
+.shortcut-item kbd {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  min-width: 80px;
+  text-align: center;
+  box-shadow: 0 2px 0 var(--border-default);
+}
+
+/* ---- Advanced Button States ---- */
+.btn-loading {
+  position: relative;
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.btn-loading::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  top: 50%;
+  left: 50%;
+  margin-top: -8px;
+  margin-left: -8px;
+}
+
+/* ---- Advanced Tooltip ---- */
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-5px);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+[data-tooltip]:hover::before {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(-8px);
+}
+
+/* ---- Advanced Progress Indicators ---- */
+.progress-steps {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.progress-step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  transition: all 0.3s ease;
+}
+
+.progress-step.active {
+  background: var(--brand-50);
+  color: var(--brand-700);
+  font-weight: var(--weight-semibold);
+}
+
+.progress-step.completed {
+  background: var(--success-50);
+  color: var(--success-700);
+}
+
+.progress-step.pending {
+  background: var(--bg-tertiary);
+  color: var(--text-tertiary);
+}
+
+.progress-step-connector {
+  width: 24px;
+  height: 2px;
+  background: var(--border-light);
+  transition: background 0.3s ease;
+}
+
+.progress-step.completed + .progress-step-connector {
+  background: var(--success-500);
+}
+
+/* ---- Advanced Card Interactions ---- */
+.card-3d {
+  transform-style: preserve-3d;
+  transition: transform 0.3s ease;
+}
+
+.card-3d:hover {
+  transform: perspective(1000px) rotateX(5deg) rotateY(5deg);
+}
+
+.card-glow {
+  position: relative;
+  overflow: hidden;
+}
+
+.card-glow::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, var(--brand-500) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.card-glow:hover::before {
+  opacity: 0.1;
+}
+
+/* ---- Advanced Transitions ---- */
+.transition-all-smooth {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.transition-color-smooth {
+  transition: color 0.3s ease, background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.transition-transform-smooth {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ---- Advanced Scrollbar ---- */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray-400) var(--bg-secondary);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-full);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--gray-400);
+  border-radius: var(--radius-full);
+  transition: background 0.2s ease;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--gray-500);
+}
+
+/* ---- Advanced Focus States ---- */
+.focus-ring {
+  outline: none;
+  position: relative;
+}
+
+.focus-ring::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border: 2px solid var(--brand-500);
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.focus-ring:focus::after {
+  opacity: 1;
+}
+
+/* ---- Advanced Responsive Utilities ---- */
+@media (max-width: 768px) {
+  .toast-container.advanced {
+    left: var(--space-2);
+    right: var(--space-2);
+    max-width: none;
+  }
+  
+  .shortcut-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1);
+  }
+  
+  .shortcut-item kbd {
+    min-width: auto;
+  }
+}
+
+/* ---- Advanced Dark Mode Overrides ---- */
+[data-theme="dark"] .toast-advanced {
+  background: var(--bg-secondary);
+  border-color: var(--border-dark);
+}
+
+[data-theme="dark"] .field-error {
+  color: var(--danger-400);
+}
+
+[data-theme="dark"] .keyboard-shortcuts-help {
+  background: var(--bg-secondary);
+}
+
+[data-theme="dark"] .progress-step.active {
+  background: rgba(76, 110, 245, 0.2);
+  color: var(--brand-400);
+}
+
+[data-theme="dark"] .progress-step.completed {
+  background: rgba(64, 192, 87, 0.2);
+  color: var(--success-400);
+}
+
+[data-theme="dark"] .card-glow::before {
+  background: radial-gradient(circle, var(--brand-400) 0%, transparent 70%);
+}

@@ -1,0 +1,508 @@
+/* ============================================================
+   ENHANCE.CSS — Additive design-system extension
+   ============================================================
+   Everything in this file is NEW: extra custom properties, new
+   keyframes, and new opt-in utility/component classes. Nothing
+   here edits or overrides a rule from variables.css/base.css/
+   components.css — existing pages keep looking exactly as they
+   did unless a template explicitly opts into one of these classes.
+   ============================================================ */
+
+:root {
+  /* ---- Motion tokens ---- */
+  --ease-spring:  cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth:  cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out:     cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 200ms;
+  --duration-base: 450ms;
+  --duration-slow: 900ms;
+
+  /* ---- Depth / glass ---- */
+  --glass-bg:      rgba(255, 255, 255, 0.66);
+  --glass-border:  rgba(255, 255, 255, 0.4);
+  --glass-blur:    18px;
+
+  --glow-brand:  0 0 1px rgba(76, 110, 245, 0.4), 0 8px 32px rgba(76, 110, 245, 0.28);
+  --glow-accent: 0 0 1px rgba(132, 94, 247, 0.4), 0 8px 32px rgba(132, 94, 247, 0.28);
+
+  --tilt-perspective: 1000px;
+
+  /* ---- Generative mesh gradient stops (reuses existing brand/accent hues) ---- */
+  --mesh-1: var(--brand-400);
+  --mesh-2: var(--accent-400);
+  --mesh-3: var(--brand-600);
+  --mesh-4: var(--accent-600);
+}
+
+[data-theme="dark"] {
+  --glass-bg:     rgba(37, 38, 43, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.09);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Belt-and-braces: individual rules below also gate on this, but a
+     blanket rule here catches anything set inline via JS too. */
+  .reveal, .tilt-card, .animate-float, .animate-spin-slow,
+  .gradient-mesh-bg, .hero-canvas, .avatar-gradient::before {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================
+   KEYFRAMES
+   ============================================================ */
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes floatY {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes gradientShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes meshDrift {
+  0%   { transform: translate(0, 0) scale(1); }
+  33%  { transform: translate(3%, -4%) scale(1.05); }
+  66%  { transform: translate(-3%, 3%) scale(0.97); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1; }
+}
+@keyframes popIn {
+  0%   { opacity: 0; transform: scale(0.85); }
+  70%  { opacity: 1; transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+
+/* ============================================================
+   SCROLL REVEAL — pair with enhance.js IntersectionObserver
+   ============================================================ */
+
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity var(--duration-base) var(--ease-out),
+              transform var(--duration-base) var(--ease-out);
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.reveal-stagger > * {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity var(--duration-base) var(--ease-out),
+              transform var(--duration-base) var(--ease-out);
+}
+.reveal-stagger.is-visible > * { opacity: 1; transform: translateY(0); }
+.reveal-stagger.is-visible > *:nth-child(1) { transition-delay: 0ms; }
+.reveal-stagger.is-visible > *:nth-child(2) { transition-delay: 60ms; }
+.reveal-stagger.is-visible > *:nth-child(3) { transition-delay: 120ms; }
+.reveal-stagger.is-visible > *:nth-child(4) { transition-delay: 180ms; }
+.reveal-stagger.is-visible > *:nth-child(5) { transition-delay: 240ms; }
+.reveal-stagger.is-visible > *:nth-child(6) { transition-delay: 300ms; }
+.reveal-stagger.is-visible > *:nth-child(n+7) { transition-delay: 340ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal, .reveal-stagger > * { opacity: 1; transform: none; transition: none; }
+}
+
+/* ============================================================
+   3D TILT — real perspective/rotateX/rotateY, driven by enhance.js
+   ============================================================ */
+
+.tilt-card {
+  --rx: 0deg;
+  --ry: 0deg;
+  --glare-x: 50%;
+  --glare-y: 50%;
+  perspective: var(--tilt-perspective);
+  transform-style: preserve-3d;
+}
+.tilt-card__inner {
+  position: relative;
+  transform: rotateX(var(--rx)) rotateY(var(--ry));
+  transition: transform var(--duration-fast) var(--ease-out);
+  will-change: transform;
+}
+.tilt-card__inner::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at var(--glare-x) var(--glare-y),
+              rgba(255, 255, 255, 0.28), transparent 60%);
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-out);
+  pointer-events: none;
+}
+.tilt-card:hover .tilt-card__inner::after { opacity: 1; }
+.tilt-card:hover .tilt-card__inner {
+  box-shadow: var(--shadow-xl);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tilt-card__inner { transform: none !important; }
+}
+@media (hover: none) {
+  /* Touch devices: skip tilt math entirely (enhance.js also checks this) */
+  .tilt-card__inner { transform: none !important; }
+}
+
+/* ============================================================
+   GLASS SURFACE
+   ============================================================ */
+
+.glass-surface {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+}
+
+/* ============================================================
+   GENERATIVE MESH BACKGROUND — the hero's ambient backdrop
+   ============================================================ */
+
+.gradient-mesh-bg {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.gradient-mesh-bg::before {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  z-index: -1;
+  background:
+    radial-gradient(38% 42% at 15% 20%, color-mix(in srgb, var(--mesh-1) 55%, transparent), transparent 70%),
+    radial-gradient(42% 46% at 85% 15%, color-mix(in srgb, var(--mesh-2) 50%, transparent), transparent 70%),
+    radial-gradient(46% 50% at 25% 90%, color-mix(in srgb, var(--mesh-3) 42%, transparent), transparent 70%),
+    radial-gradient(40% 44% at 90% 85%, color-mix(in srgb, var(--mesh-4) 46%, transparent), transparent 70%);
+  filter: blur(40px);
+  animation: meshDrift 22s ease-in-out infinite;
+}
+[data-theme="dark"] .gradient-mesh-bg::before { filter: blur(50px) brightness(0.75); }
+
+@media (prefers-reduced-motion: reduce) {
+  .gradient-mesh-bg::before { animation: none; }
+}
+
+/* ============================================================
+   HERO CANVAS (three.js mount point — see hero-scene.js)
+   ============================================================ */
+
+.hero-canvas-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+.hero-canvas-wrap canvas { display: block; width: 100%; height: 100%; }
+.hero-content { position: relative; z-index: 1; }
+
+/* ============================================================
+   BUTTON / CARD MODIFIERS (opt-in, don't touch .btn/.card base)
+   ============================================================ */
+
+.btn-glow { transition: box-shadow var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out); }
+.btn-glow:hover { box-shadow: var(--glow-brand); transform: translateY(-1px); }
+.btn-glow:active { transform: translateY(0); }
+
+.card-animated { animation: fadeInUp var(--duration-base) var(--ease-out) both; }
+
+/* ============================================================
+   FLUID TYPOGRAPHY HELPERS
+   ============================================================ */
+
+.text-fluid-hero  { font-size: clamp(2rem, 1.1rem + 4vw, 4rem); line-height: 1.05; }
+.text-fluid-title { font-size: clamp(1.5rem, 1.1rem + 1.6vw, 2.5rem); line-height: 1.12; }
+.text-fluid-body   { font-size: clamp(0.95rem, 0.88rem + 0.3vw, 1.125rem); }
+
+/* ============================================================
+   AVATAR — deterministic per-user gradient
+   (opt-in: add class="avatar avatar-gradient" and inline
+   style="--avatar-hue: 217" computed server-side from the
+   username; falls back to the existing flat --brand-100 if the
+   custom property isn't set anywhere.)
+   ============================================================ */
+
+.avatar-gradient {
+  --avatar-hue: 230;
+  background: linear-gradient(135deg,
+    hsl(var(--avatar-hue), 70%, 58%),
+    hsl(calc(var(--avatar-hue) + 50), 70%, 50%));
+  color: #fff;
+  position: relative;
+}
+
+/* ============================================================
+   EMPTY STATE — optional floating/glow enhancement
+   (opt-in: add class="empty-state-icon--floating" alongside the
+   existing .empty-state-icon; base class is untouched)
+   ============================================================ */
+
+.empty-state-icon--floating {
+  animation: floatY 4.5s ease-in-out infinite;
+  filter: drop-shadow(0 8px 20px color-mix(in srgb, var(--brand-500) 25%, transparent));
+}
+.empty-state-icon--floating svg { opacity: 0.9; }
+
+/* ============================================================
+   CATEGORY / STYLE PREVIEW MEDIA (styles.html cards)
+   ============================================================ */
+
+.category-card-media {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: var(--space-2);
+  background: var(--bg-tertiary);
+  position: relative;
+}
+.category-card-media img {
+  width: 100%; height: 100%; object-fit: cover;
+  transition: transform var(--duration-base) var(--ease-out);
+}
+.category-card:hover .category-card-media img { transform: scale(1.08); }
+
+/* ============================================================
+   SKELETON SHIMMER for image tiles that are still loading
+   (distinct name from the existing .skeleton to avoid clashing)
+   ============================================================ */
+
+.media-shimmer {
+  position: relative;
+  overflow: hidden;
+  background: var(--bg-tertiary);
+}
+.media-shimmer::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--bg-primary) 60%, transparent) 50%, transparent 70%);
+  background-size: 200% 100%;
+  animation: gradientShift 1.6s linear infinite;
+}
+
+/* ============================================================
+   COMMAND PALETTE (Cmd/Ctrl+K)
+   ============================================================ */
+
+.cmdk-overlay {
+  position: fixed; inset: 0;
+  background: var(--bg-overlay);
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12vh;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+.cmdk-overlay.active { opacity: 1; visibility: visible; }
+.cmdk-panel {
+  width: min(560px, 92vw);
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-2xl);
+  overflow: hidden;
+  transform: translateY(-12px) scale(0.98);
+  transition: transform var(--duration-fast) var(--ease-spring);
+}
+.cmdk-overlay.active .cmdk-panel { transform: translateY(0) scale(1); }
+.cmdk-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: var(--space-4) var(--space-5);
+  font-size: var(--text-lg);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-default);
+}
+.cmdk-list { max-height: 360px; overflow-y: auto; padding: var(--space-2); }
+.cmdk-item {
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-3) var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+.cmdk-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+.cmdk-item.active, .cmdk-item:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+.cmdk-empty { padding: var(--space-8); text-align: center; color: var(--text-tertiary); font-size: var(--text-sm); }
+.cmdk-hint { margin-left: auto; font-size: var(--text-xs); color: var(--text-tertiary); border: 1px solid var(--border-default); border-radius: var(--radius-sm); padding: 1px 6px; }
+
+/* ============================================================
+   SCROLLBAR POLISH (global, cosmetic only)
+   ============================================================ */
+
+* { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: var(--radius-full);
+  border: 2px solid var(--bg-primary);
+}
+*::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
+
+/* ============================================================
+   FOCUS-VISIBLE POLISH (a11y — additive, layered on top of
+   whatever base.css already defines)
+   ============================================================ */
+
+.tilt-card:focus-visible,
+.category-card:focus-visible,
+.cmdk-item:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 3px;
+  border-radius: var(--radius-md);
+}
+
+/* ============================================================
+   RESPONSIVE REFINEMENTS — extra breakpoints for very small /
+   very large viewports, additive to whatever base.css already
+   handles at the sidebar-collapse breakpoint
+   ============================================================ */
+
+@media (max-width: 380px) {
+  .text-fluid-hero  { font-size: clamp(1.6rem, 8vw, 2.2rem); }
+  .cmdk-panel { width: 96vw; }
+}
+
+@media (min-width: 1600px) {
+  .container-wide { max-width: 1440px; margin-inline: auto; }
+}
+
+/* ============================================================
+   HERO SHOWCASE — bento grid of real generated-art samples
+   ============================================================ */
+
+.hero-visual-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--space-2);
+  padding: var(--space-3);
+  aspect-ratio: auto;
+  background: var(--bg-secondary);
+}
+.hero-visual-tile { border-radius: var(--radius-lg); }
+.hero-visual-tile .tilt-card__inner {
+  position: relative;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  aspect-ratio: 1 / 1;
+  box-shadow: var(--shadow-sm);
+}
+.hero-visual-tile img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+  transition: transform var(--duration-base) var(--ease-out);
+}
+.hero-visual-tile:hover img { transform: scale(1.06); }
+.hero-visual-tile-caption {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: var(--space-2) var(--space-2) var(--space-1);
+  font-size: 10px;
+  line-height: 1.2;
+  color: #fff;
+  background: linear-gradient(to top, rgba(0,0,0,0.65), transparent);
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
+}
+.hero-visual-tile:hover .hero-visual-tile-caption { opacity: 1; transform: translateY(0); }
+.hero-visual-note {
+  margin-top: var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .hero-visual-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+.animate-float     { animation: floatY 5s ease-in-out infinite; }
+.animate-spin-slow  { animation: spinSlow 14s linear infinite; }
+.animate-fade-in    { animation: fadeIn var(--duration-base) var(--ease-out) both; }
+.animate-fade-in-up { animation: fadeInUp var(--duration-base) var(--ease-out) both; }
+.animate-scale-in   { animation: scaleIn var(--duration-fast) var(--ease-spring) both; }
+.animate-pop-in     { animation: popIn var(--duration-base) var(--ease-spring) both; }
+.animate-glow-pulse { animation: glowPulse 2.4s ease-in-out infinite; }
+.delay-1 { animation-delay: 80ms; }
+.delay-2 { animation-delay: 160ms; }
+.delay-3 { animation-delay: 240ms; }
+.delay-4 { animation-delay: 320ms; }
+
+/* ============================================================
+   PROMPT SUGGESTIONS (dashboard) — proper wrapping + polish
+   Fixes the .btn white-space:nowrap overflow bug for long text
+   ============================================================ */
+
+.prompt-suggestion-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.prompt-suggestion {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  width: 100%;
+  text-align: left;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out),
+              transform var(--duration-fast) var(--ease-out);
+}
+.prompt-suggestion:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--border-default);
+  transform: translateX(2px);
+}
+.prompt-suggestion-icon {
+  flex-shrink: 0;
+  font-size: var(--text-lg);
+  line-height: 1.4;
+}
+.prompt-suggestion-text {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.4;
+  white-space: normal;
+  overflow-wrap: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.prompt-suggestion:hover .prompt-suggestion-text { color: var(--text-primary); }

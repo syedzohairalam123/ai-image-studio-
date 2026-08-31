@@ -1,0 +1,559 @@
+{% extends "base.html" %}
+{% block title %}Prompt Library — AI Studio{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between" style="margin-bottom:var(--space-6);flex-wrap:wrap;gap:var(--space-3);">
+  <div>
+    <h3 style="margin-bottom:var(--space-2);">Prompt Library</h3>
+    <p class="text-sm text-muted" id="lib-count">Loading...</p>
+  </div>
+  <div class="flex gap-2">
+    <button class="btn btn-primary btn-sm" onclick="openNewPromptModal()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      New Prompt
+    </button>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs" style="margin-bottom:var(--space-6);">
+  <button class="tab active" onclick="switchTab('library')">My Prompts</button>
+  <button class="tab" onclick="switchTab('templates')">Templates</button>
+</div>
+
+<!-- Library Tab -->
+<div id="tab-library">
+  <!-- Search & Filters -->
+  <div class="flex gap-3 mb-4" style="flex-wrap:wrap;">
+    <input type="text" id="lib-search" class="input" placeholder="Search prompts..." style="max-width:300px;">
+    <select id="lib-sort" class="select" style="width:auto;">
+      <option value="newest">Newest</option>
+      <option value="oldest">Oldest</option>
+      <option value="title">A–Z</option>
+    </select>
+    <label class="checkbox">
+      <input type="checkbox" id="lib-fav-only">
+      <span>♥ Favorites only</span>
+    </label>
+  </div>
+
+  <!-- Tags -->
+  <div id="lib-tags" class="flex gap-2 mb-4" style="flex-wrap:wrap;display:none;"></div>
+
+  <!-- Prompts Grid -->
+  <div id="lib-grid" class="grid grid-3" style="gap:var(--space-4);"></div>
+
+  <!-- Loading -->
+  <div id="lib-loading" style="display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-4);">
+    <div class="skeleton" style="height:120px;border-radius:var(--radius-lg);"></div>
+    <div class="skeleton" style="height:120px;border-radius:var(--radius-lg);"></div>
+    <div class="skeleton" style="height:120px;border-radius:var(--radius-lg);"></div>
+  </div>
+
+  <!-- Empty State -->
+  <div class="empty-state" id="lib-empty" style="display:none;">
+    <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+    </svg>
+    <h4 class="empty-state-title">No saved prompts</h4>
+    <p class="empty-state-description">Save prompts from the generator or create new ones here.</p>
+    <a href="/generate" class="btn btn-primary">Go to Generator</a>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination" id="lib-pagination" style="display:none;margin-top:var(--space-6);">
+    <button class="btn btn-secondary btn-sm" id="lib-prev" disabled>← Prev</button>
+    <span class="text-sm text-muted" id="lib-page-info">Page 1</span>
+    <button class="btn btn-secondary btn-sm" id="lib-next" disabled>Next →</button>
+  </div>
+</div>
+
+<!-- Templates Tab -->
+<div id="tab-templates" style="display:none;">
+  <div id="templates-grid" class="grid grid-3" style="gap:var(--space-4);"></div>
+  <div class="empty-state" id="templates-empty" style="display:none;">
+    <p class="text-muted">No templates available.</p>
+  </div>
+</div>
+
+<!-- New/Edit Prompt Modal -->
+<div class="modal-overlay" id="prompt-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h4 class="modal-title" id="modal-title">New Prompt</h4>
+      <button class="btn btn-ghost btn-sm" onclick="Modal.hide('prompt-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-prompt-id">
+      <div class="form-group mb-4">
+        <label class="form-label" for="pm-title">Title</label>
+        <input type="text" id="pm-title" class="input" placeholder="My prompt">
+      </div>
+      <div class="form-group mb-4">
+        <label class="form-label" for="pm-prompt">Prompt</label>
+        <textarea id="pm-prompt" class="textarea" style="min-height:100px;" placeholder="Describe your image..."></textarea>
+      </div>
+      <div class="form-group mb-4">
+        <label class="form-label" for="pm-neg">Negative Prompt</label>
+        <input type="text" id="pm-neg" class="input" placeholder="blurry, low quality">
+      </div>
+      <div class="form-group mb-4">
+        <label class="form-label" for="pm-tags">Tags (comma separated)</label>
+        <input type="text" id="pm-tags" class="input" placeholder="landscape, sunset">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="pm-style">Style</label>
+        <select id="pm-style" class="select">
+          <option value="">None</option>
+          <option value="photo">Photo</option>
+          <option value="art">Digital Art</option>
+          <option value="paint">Painting</option>
+          <option value="anime">Anime</option>
+          <option value="3d">3D Render</option>
+          <option value="pixel">Pixel Art</option>
+          <option value="minimal">Minimal</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="Modal.hide('prompt-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="savePrompt()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation -->
+<div class="modal-overlay confirm-dialog" id="delete-prompt-modal">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-header">
+      <h4 class="modal-title">Delete Prompt</h4>
+      <button class="btn btn-ghost btn-sm" onclick="Modal.hide('delete-prompt-modal')">✕</button>
+    </div>
+    <div class="modal-body" style="text-align:center;">
+      <div class="confirm-dialog-icon danger" style="width:48px;height:48px;border-radius:50%;background:var(--danger-100);color:var(--danger-600);display:flex;align-items:center;justify-content:center;margin:0 auto var(--space-4);font-size:24px;">🗑</div>
+      <p class="text-sm" style="color:var(--text-secondary);">Are you sure? This cannot be undone.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="Modal.hide('delete-prompt-modal')">Cancel</button>
+      <button class="btn btn-danger" id="confirm-delete-prompt-btn">Delete</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block head_extra %}
+<style>
+  .prompt-card {
+    background: var(--surface-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    transition: all 0.15s;
+    cursor: default;
+  }
+  .prompt-card:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--border-brand);
+  }
+  .prompt-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: var(--space-2);
+  }
+  .prompt-card-title {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    color: var(--text-primary);
+  }
+  .prompt-card-text {
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.5;
+    margin-bottom: var(--space-2);
+  }
+  .prompt-card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    margin-bottom: var(--space-2);
+  }
+  .prompt-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: var(--space-2);
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--border-default);
+  }
+  .prompt-card-date {
+    font-size: 10px;
+    color: var(--text-tertiary);
+  }
+  .prompt-card-actions {
+    display: flex;
+    gap: var(--space-1);
+  }
+  .prompt-card-actions button {
+    background: none;
+    border: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: var(--radius-sm);
+    font-size: var(--text-xs);
+  }
+  .prompt-card-actions button:hover {
+    color: var(--text-primary);
+    background: var(--bg-tertiary);
+  }
+  .template-card {
+    background: var(--surface-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    transition: all 0.15s;
+  }
+  .template-card:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--border-brand);
+  }
+  .template-card-title {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    margin-bottom: var(--space-2);
+  }
+  .template-card-text {
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: var(--space-3);
+  }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  'use strict';
+
+  const API = '/api/v1/prompts';
+  let currentPage = 1;
+  let currentTab = 'library';
+  let deleteTargetId = null;
+  let searchTimeout = null;
+
+  // ---- Tab Switching ----
+  window.switchTab = function(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('tab-library').style.display = tab === 'library' ? 'block' : 'none';
+    document.getElementById('tab-templates').style.display = tab === 'templates' ? 'block' : 'none';
+    if (tab === 'templates') loadTemplates();
+  };
+
+  // ---- Load Library ----
+  async function loadLibrary(page = 1) {
+    currentPage = page;
+    const params = new URLSearchParams();
+    params.set('page', page);
+    params.set('per_page', 12);
+
+    const search = document.getElementById('lib-search').value.trim();
+    const sort = document.getElementById('lib-sort').value;
+    const favOnly = document.getElementById('lib-fav-only').checked;
+
+    if (search) params.set('search', search);
+    if (sort) params.set('sort', sort);
+    if (favOnly) params.set('favorite', 'true');
+
+    const grid = document.getElementById('lib-grid');
+    const loading = document.getElementById('lib-loading');
+    const empty = document.getElementById('lib-empty');
+    const pagination = document.getElementById('lib-pagination');
+
+    grid.innerHTML = '';
+    loading.style.display = 'grid';
+    empty.style.display = 'none';
+    pagination.style.display = 'none';
+
+    try {
+      const resp = await fetch(`${API}?${params}`);
+      if (!resp.ok) throw new Error('Failed');
+      const data = await resp.json();
+
+      loading.style.display = 'none';
+      document.getElementById('lib-count').textContent = `${data.total} saved prompt${data.total !== 1 ? 's' : ''}`;
+
+      // Render tags
+      const tagsContainer = document.getElementById('lib-tags');
+      if (data.all_tags && data.all_tags.length > 0) {
+        tagsContainer.style.display = 'flex';
+        tagsContainer.innerHTML = data.all_tags.map(tag =>
+          `<button class="chip" onclick="filterByTag('${escapeHtml(tag)}')">${escapeHtml(tag)}</button>`
+        ).join('');
+      } else {
+        tagsContainer.style.display = 'none';
+      }
+
+      if (data.prompts.length === 0) {
+        empty.style.display = 'flex';
+        return;
+      }
+
+      data.prompts.forEach(p => grid.appendChild(createCard(p)));
+
+      if (data.pages > 1) {
+        pagination.style.display = 'flex';
+        document.getElementById('lib-page-info').textContent = `Page ${data.page} of ${data.pages}`;
+        document.getElementById('lib-prev').disabled = !data.has_prev;
+        document.getElementById('lib-next').disabled = !data.has_next;
+      }
+    } catch (e) {
+      loading.style.display = 'none';
+      Toast.error('Failed to load prompts');
+    }
+  }
+
+  function createCard(p) {
+    const card = document.createElement('div');
+    card.className = 'prompt-card';
+
+    const tags = (p.tags || []).map(t =>
+      `<span class="badge badge-neutral">${escapeHtml(t)}</span>`
+    ).join('');
+
+    const date = p.created_at ? new Date(p.created_at).toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric'
+    }) : '';
+
+    card.innerHTML = `
+      <div class="prompt-card-header">
+        <span class="prompt-card-title">${escapeHtml(p.title)}</span>
+        <button onclick="event.stopPropagation(); toggleFav(${p.id})" title="Favorite"
+                style="background:none;border:none;cursor:pointer;font-size:16px;color:${p.is_favorite ? 'var(--danger-500)' : 'var(--text-tertiary)'};">
+          ${p.is_favorite ? '♥' : '♡'}
+        </button>
+      </div>
+      <div class="prompt-card-text">${escapeHtml(p.prompt)}</div>
+      ${tags ? `<div class="prompt-card-tags">${tags}</div>` : ''}
+      ${p.negative_prompt ? `<div class="text-xs text-muted" style="margin-bottom:var(--space-1);">- ${escapeHtml(p.negative_prompt.substring(0, 40))}</div>` : ''}
+      <div class="prompt-card-footer">
+        <span class="prompt-card-date">${date}</span>
+        <div class="prompt-card-actions">
+          <button onclick="event.stopPropagation(); usePrompt(\`${escapeJs(p.prompt)}\`, \`${escapeJs(p.negative_prompt || '')}\`, '${escapeJs(p.style || '')}')" title="Use in generator">▶ Use</button>
+          <button onclick="event.stopPropagation(); duplicatePrompt(${p.id})" title="Duplicate">⧉</button>
+          <button onclick="event.stopPropagation(); editPrompt(${p.id}, '${escapeJs(p.title)}', \`${escapeJs(p.prompt)}\`, \`${escapeJs(p.negative_prompt || '')}\`, '${escapeJs(JSON.stringify(p.tags || []))}', '${escapeJs(p.style || '')}')" title="Edit">✎</button>
+          <button onclick="event.stopPropagation(); confirmDeletePrompt(${p.id})" title="Delete" style="color:var(--danger-500);">✕</button>
+        </div>
+      </div>
+    `;
+    return card;
+  }
+
+  // ---- Load Templates ----
+  async function loadTemplates() {
+    try {
+      const resp = await fetch(`${API}/templates`);
+      if (!resp.ok) throw new Error('Failed');
+      const data = await resp.json();
+
+      const grid = document.getElementById('templates-grid');
+      const empty = document.getElementById('templates-empty');
+      grid.innerHTML = '';
+
+      if (data.templates.length === 0) {
+        empty.style.display = 'flex';
+        return;
+      }
+      empty.style.display = 'none';
+
+      data.templates.forEach(t => {
+        const card = document.createElement('div');
+        card.className = 'template-card';
+        card.innerHTML = `
+          <div class="template-card-title">${escapeHtml(t.title)}</div>
+          <div class="template-card-text">${escapeHtml(t.prompt)}</div>
+          <div class="flex gap-2" style="flex-wrap:wrap;margin-bottom:var(--space-3);">
+            ${(t.tags || []).map(tag => `<span class="badge badge-neutral">${escapeHtml(tag)}</span>`).join('')}
+            ${t.style ? `<span class="badge badge-brand">${escapeHtml(t.style)}</span>` : ''}
+          </div>
+          <div class="flex gap-2">
+            <button class="btn btn-primary btn-sm" onclick="useTemplatePrompt(\`${escapeJs(t.prompt)}\`, \`${escapeJs(t.negative_prompt || '')}\`, '${escapeJs(t.style || '')}')">Use Template</button>
+            <button class="btn btn-ghost btn-sm" onclick="saveTemplateAsPrompt('${escapeJs(t.title)}', \`${escapeJs(t.prompt)}\`, \`${escapeJs(t.negative_prompt || '')}\`, '${escapeJs(t.style || '')}')">Save to Library</button>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    } catch (e) {
+      Toast.error('Failed to load templates');
+    }
+  }
+
+  // ---- Actions ----
+  window.usePrompt = function(prompt, neg, style) {
+    const params = new URLSearchParams();
+    params.set('prompt', prompt);
+    if (neg) params.set('negative', neg);
+    if (style) params.set('style', style);
+    window.location.href = `/generate?${params}`;
+  };
+
+  window.useTemplatePrompt = function(prompt, neg, style) {
+    usePrompt(prompt, neg, style);
+  };
+
+  window.saveTemplateAsPrompt = function(title, prompt, neg, style) {
+    document.getElementById('modal-title').textContent = 'Save Template as Prompt';
+    document.getElementById('edit-prompt-id').value = '';
+    document.getElementById('pm-title').value = title;
+    document.getElementById('pm-prompt').value = prompt;
+    document.getElementById('pm-neg').value = neg;
+    document.getElementById('pm-tags').value = '';
+    document.getElementById('pm-style').value = style;
+    Modal.show('prompt-modal');
+  };
+
+  window.toggleFav = async function(id) {
+    try {
+      const resp = await fetch(`${API}/${id}/favorite`, { method: 'POST' });
+      if (!resp.ok) throw new Error('Failed');
+      loadLibrary(currentPage);
+    } catch (e) { Toast.error('Failed'); }
+  };
+
+  window.duplicatePrompt = async function(id) {
+    try {
+      const resp = await fetch(`${API}/${id}/duplicate`, { method: 'POST' });
+      if (!resp.ok) throw new Error('Failed');
+      Toast.success('Prompt duplicated');
+      loadLibrary(currentPage);
+    } catch (e) { Toast.error('Failed to duplicate'); }
+  };
+
+  window.editPrompt = function(id, title, prompt, neg, tagsStr, style) {
+    document.getElementById('modal-title').textContent = 'Edit Prompt';
+    document.getElementById('edit-prompt-id').value = id;
+    document.getElementById('pm-title').value = title;
+    document.getElementById('pm-prompt').value = prompt;
+    document.getElementById('pm-neg').value = neg;
+    try {
+      const tags = JSON.parse(tagsStr || '[]');
+      document.getElementById('pm-tags').value = tags.join(', ');
+    } catch(e) {
+      document.getElementById('pm-tags').value = '';
+    }
+    document.getElementById('pm-style').value = style;
+    Modal.show('prompt-modal');
+  };
+
+  window.openNewPromptModal = function() {
+    document.getElementById('modal-title').textContent = 'New Prompt';
+    document.getElementById('edit-prompt-id').value = '';
+    document.getElementById('pm-title').value = '';
+    document.getElementById('pm-prompt').value = '';
+    document.getElementById('pm-neg').value = '';
+    document.getElementById('pm-tags').value = '';
+    document.getElementById('pm-style').value = '';
+    Modal.show('prompt-modal');
+  };
+
+  window.savePrompt = async function() {
+    const id = document.getElementById('edit-prompt-id').value;
+    const title = document.getElementById('pm-title').value.trim();
+    const prompt = document.getElementById('pm-prompt').value.trim();
+    const neg = document.getElementById('pm-neg').value.trim() || null;
+    const tagsStr = document.getElementById('pm-tags').value.trim();
+    const style = document.getElementById('pm-style').value || null;
+
+    if (!title) { Toast.warning('Title required'); return; }
+    if (!prompt) { Toast.warning('Prompt required'); return; }
+
+    const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(Boolean) : [];
+    const body = { title, prompt, negative_prompt: neg, tags, style };
+
+    try {
+      let resp;
+      if (id) {
+        resp = await fetch(`${API}/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+      } else {
+        resp = await fetch(API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+      }
+      if (!resp.ok) throw new Error('Failed');
+      Modal.hide('prompt-modal');
+      Toast.success(id ? 'Prompt updated' : 'Prompt saved');
+      loadLibrary(currentPage);
+    } catch (e) { Toast.error('Failed to save'); }
+  };
+
+  window.confirmDeletePrompt = function(id) {
+    deleteTargetId = id;
+    Modal.show('delete-prompt-modal');
+  };
+
+  document.getElementById('confirm-delete-prompt-btn').addEventListener('click', async () => {
+    if (!deleteTargetId) return;
+    try {
+      const resp = await fetch(`${API}/${deleteTargetId}`, { method: 'DELETE' });
+      if (!resp.ok) throw new Error('Failed');
+      Modal.hide('delete-prompt-modal');
+      Toast.success('Prompt deleted');
+      deleteTargetId = null;
+      loadLibrary(currentPage);
+    } catch (e) { Toast.error('Failed to delete'); }
+  });
+
+  window.filterByTag = function(tag) {
+    document.getElementById('lib-search').value = tag;
+    loadLibrary(1);
+  };
+
+  // ---- Search & Filter Events ----
+  document.getElementById('lib-search').addEventListener('input', () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => loadLibrary(1), 300);
+  });
+  document.getElementById('lib-sort').addEventListener('change', () => loadLibrary(1));
+  document.getElementById('lib-fav-only').addEventListener('change', () => loadLibrary(1));
+
+  // ---- Pagination ----
+  document.getElementById('lib-prev').addEventListener('click', () => {
+    if (currentPage > 1) loadLibrary(currentPage - 1);
+  });
+  document.getElementById('lib-next').addEventListener('click', () => {
+    loadLibrary(currentPage + 1);
+  });
+
+  // ---- Helpers ----
+  function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+  function escapeJs(str) {
+    if (!str) return '';
+    return str.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
+  }
+
+  // ---- Init ----
+  loadLibrary(1);
+})();
+</script>
+{% endblock %}

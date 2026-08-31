@@ -1,0 +1,622 @@
+{% extends "base.html" %}
+{% block title %}Editor — AI Studio{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/editor.css') }}">
+{% endblock %}
+
+{% block header_left %}
+<h4 style="font-size:var(--text-base);font-weight:var(--weight-semibold);">Image Editor</h4>
+{% endblock %}
+
+{% block content %}
+<div class="editor-layout" id="editor-layout">
+
+  <input type="file" id="editor-upload-input" accept="image/png,image/jpeg,image/webp" style="display:none;">
+
+  <!-- ===== TOOLBAR ===== -->
+  <div class="editor-toolbar">
+    <div class="editor-toolbar-group">
+      <button class="editor-toolbar-btn" id="toolbar-upload" title="Upload your own image to edit">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <span>Upload</span>
+      </button>
+
+      <div class="editor-toolbar-divider"></div>
+    </div>
+
+    <div class="editor-toolbar-group">
+      <button class="editor-toolbar-btn" id="toolbar-undo" disabled title="Undo (Ctrl+Z)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+        <span>Undo</span>
+      </button>
+      <button class="editor-toolbar-btn" id="toolbar-redo" disabled title="Redo (Ctrl+Shift+Z)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        <span>Redo</span>
+      </button>
+
+      <div class="editor-toolbar-divider"></div>
+
+      <button class="editor-toolbar-btn" id="toolbar-reset" title="Reset to Original">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        <span>Reset</span>
+      </button>
+
+      <div class="editor-toolbar-divider"></div>
+
+      <button class="editor-toolbar-btn" id="toolbar-compare" title="Before/After Comparison">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+        <span>Compare</span>
+      </button>
+    </div>
+
+    <div class="editor-toolbar-group">
+      <button class="editor-toolbar-btn" id="toolbar-download" title="Download Current Version">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span>Download</span>
+      </button>
+
+      <button class="editor-toolbar-btn btn-primary" id="toolbar-save-version" title="Save as New Version (Ctrl+S)" style="background:var(--brand-600);color:#fff;border-color:var(--brand-600);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        <span>Save Version</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== LEFT PANEL: TOOLS ===== -->
+  <div class="editor-panel-left">
+    <!-- Local Tools -->
+    <div class="editor-panel-section">
+      <div class="editor-panel-title">Local Tools</div>
+      <div class="editor-tools-grid">
+        <button class="editor-tool-btn" data-editor-tool="crop" title="Crop (C)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.13 1L6 16a2 2 0 0 0 2 2h15"/><path d="M1 6.13L16 6a2 2 0 0 1 2 2v15"/></svg>
+          <span class="editor-tool-btn-label">Crop</span>
+        </button>
+        <button class="editor-tool-btn" data-editor-tool="resize" title="Resize">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+          <span class="editor-tool-btn-label">Resize</span>
+        </button>
+        <button class="editor-tool-btn" data-editor-tool="rotate" title="Rotate (R)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+          <span class="editor-tool-btn-label">Rotate</span>
+        </button>
+        <button class="editor-tool-btn" data-editor-tool="flip" title="Flip (F)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h3"/><path d="M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3"/><line x1="12" y1="2" x2="12" y2="22"/></svg>
+          <span class="editor-tool-btn-label">Flip</span>
+        </button>
+        <button class="editor-tool-btn" data-editor-tool="brightness" title="Brightness (B)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <span class="editor-tool-btn-label">Brightness</span>
+        </button>
+        <button class="editor-tool-btn" data-editor-tool="contrast" title="Contrast (K)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 0 20z"/></svg>
+          <span class="editor-tool-btn-label">Contrast</span>
+        </button>
+        <button class="editor-tool-btn" data-editor-tool="saturation" title="Saturation (S)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+          <span class="editor-tool-btn-label">Saturation</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Tool Settings -->
+    <div class="editor-panel-section">
+      <!-- Crop Settings -->
+      <div class="editor-tool-settings" id="settings-crop" style="display:none;">
+        <div class="editor-panel-title">Crop Settings</div>
+        <div class="editor-slider-group">
+          <div class="editor-slider-header">
+            <span class="editor-slider-label">X Position</span>
+          </div>
+          <input type="number" id="crop-x" class="input" value="0" min="0" placeholder="0">
+        </div>
+        <div class="editor-slider-group">
+          <div class="editor-slider-header">
+            <span class="editor-slider-label">Y Position</span>
+          </div>
+          <input type="number" id="crop-y" class="input" value="0" min="0" placeholder="0">
+        </div>
+        <div class="editor-slider-group">
+          <div class="editor-slider-header">
+            <span class="editor-slider-label">Width</span>
+          </div>
+          <input type="number" id="crop-width" class="input" min="1" placeholder="Width">
+        </div>
+        <div class="editor-slider-group">
+          <div class="editor-slider-header">
+            <span class="editor-slider-label">Height</span>
+          </div>
+          <input type="number" id="crop-height" class="input" min="1" placeholder="Height">
+        </div>
+        <button class="btn btn-primary btn-sm" id="apply-crop-btn" style="width:100%;margin-top:var(--space-2);">Apply Crop</button>
+      </div>
+
+      <!-- Resize Settings -->
+      <div class="editor-tool-settings" id="settings-resize" style="display:none;">
+        <div class="editor-panel-title">Resize Settings</div>
+        <div class="editor-slider-group">
+          <div class="editor-slider-header">
+            <span class="editor-slider-label">Width (px)</span>
+          </div>
+          <input type="number" id="resize-width" class="input" min="1" max="4096" placeholder="Width">
+        </div>
+        <div class="editor-slider-group">
+          <div class="editor-slider-header">
+            <span class="editor-slider-label">Height (px)</span>
+          </div>
+          <input type="number" id="resize-height" class="input" min="1" max="4096" placeholder="Height">
+        </div>
+        <label class="checkbox" style="margin-top:var(--space-2);margin-bottom:var(--space-3);">
+          <input type="checkbox" id="resize-ratio" checked>
+          <span>Maintain aspect ratio</span>
+        </label>
+        <button class="btn btn-primary btn-sm" id="apply-resize-btn" style="width:100%;">Apply Resize</button>
+      </div>
+
+      <!-- Rotate Settings -->
+      <div class="editor-tool-settings" id="settings-rotate" style="display:none;">
+        <div class="editor-panel-title">Rotate Settings</div>
+        <div class="flex gap-2" style="margin-bottom:var(--space-3);">
+          <button class="chip" data-rotate-angle="90" style="flex:1;">90°</button>
+          <button class="chip chip-active" data-rotate-angle="-90" style="flex:1;">-90°</button>
+          <button class="chip" data-rotate-angle="180" style="flex:1;">180°</button>
+        </div>
+        <button class="btn btn-primary btn-sm" id="apply-rotate-btn" style="width:100%;">Apply Rotation</button>
+      </div>
+
+      <!-- Flip Settings -->
+      <div class="editor-tool-settings" id="settings-flip" style="display:none;">
+        <div class="editor-panel-title">Flip Settings</div>
+        <div class="flex gap-2" style="margin-bottom:var(--space-3);">
+          <button class="chip chip-active" data-flip-dir="horizontal" style="flex:1;">← → Horizontal</button>
+          <button class="chip" data-flip-dir="vertical" style="flex:1;">↑ ↓ Vertical</button>
+        </div>
+        <button class="btn btn-primary btn-sm" id="apply-flip-btn" style="width:100%;">Apply Flip</button>
+      </div>
+
+      <!-- Brightness Settings -->
+      <div class="editor-tool-settings" id="settings-brightness" style="display:none;">
+        <div class="editor-panel-title">Brightness</div>
+        <div class="editor-slider-group">
+          <div class="editor-slider-header">
+            <span class="editor-slider-label">Level</span>
+            <span class="editor-slider-value" id="brightness-value">1.00</span>
+          </div>
+          <input type="range" class="slider editor-slider" id="brightness-slider" min="10" max="300" value="100" step="1">
+        </div>
+        <button class="btn btn-primary btn-sm" id="apply-local-btn" style="width:100%;margin-top:var(--space-2);">Apply All Adjustments</button>
+      </div>
+
+      <!-- Contrast Settings -->
+      <div class="editor-tool-settings" id="settings-contrast" style="display:none;">
+        <div class="editor-panel-title">Contrast</div>
+        <div class="editor-slider-group">
+          <div class="editor-slider-header">
+            <span class="editor-slider-label">Level</span>
+            <span class="editor-slider-value" id="contrast-value">1.00</span>
+          </div>
+          <input type="range" class="slider editor-slider" id="contrast-slider" min="10" max="300" value="100" step="1">
+        </div>
+        <button class="btn btn-primary btn-sm" style="width:100%;margin-top:var(--space-2);" onclick="document.getElementById('apply-local-btn').click()">Apply All Adjustments</button>
+      </div>
+
+      <!-- Saturation Settings -->
+      <div class="editor-tool-settings" id="settings-saturation" style="display:none;">
+        <div class="editor-panel-title">Saturation</div>
+        <div class="editor-slider-group">
+          <div class="editor-slider-header">
+            <span class="editor-slider-label">Level</span>
+            <span class="editor-slider-value" id="saturation-value">1.00</span>
+          </div>
+          <input type="range" class="slider editor-slider" id="saturation-slider" min="0" max="300" value="100" step="1">
+        </div>
+        <button class="btn btn-primary btn-sm" style="width:100%;margin-top:var(--space-2);" onclick="document.getElementById('apply-local-btn').click()">Apply All Adjustments</button>
+      </div>
+
+      <!-- No tool selected hint -->
+      <div id="no-tool-hint" style="color:var(--text-tertiary);font-size:var(--text-xs);text-align:center;padding:var(--space-4);">
+        Select a tool from above to see settings
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CANVAS AREA ===== -->
+  <div class="editor-canvas-container editor-canvas-bg" id="editor-canvas-container">
+    <!-- Empty State -->
+    <div class="editor-empty-state" id="editor-empty-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+      </svg>
+      <h4>No image loaded</h4>
+      <p>Upload your own photo, open one from the gallery, or generate a new one.</p>
+      <div class="flex gap-2">
+        <button class="btn btn-primary" id="empty-state-upload-btn">Upload Image</button>
+        <a href="/gallery" class="btn btn-secondary">View Gallery</a>
+        <a href="/generate" class="btn btn-secondary">Generate Image</a>
+      </div>
+    </div>
+
+    <!-- Canvas Image -->
+    <div class="editor-canvas-wrapper">
+      <img id="editor-canvas-img" class="editor-canvas" src="" alt="Editing" style="display:none;">
+    </div>
+
+    <!-- Mask Toolbar (hidden by default) -->
+    <div class="editor-mask-toolbar" id="editor-mask-toolbar" style="display:none;">
+      <button class="editor-mask-btn active" id="mask-brush" title="Brush">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+      </button>
+      <button class="editor-mask-btn" id="mask-erase" title="Eraser">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 20H7L3 16l9-9 8 8-4 4"/><path d="M6.5 13.5l5-5"/></svg>
+      </button>
+      <div style="height:1px;background:var(--border-default);margin:var(--space-1) 0;"></div>
+      <div style="padding:var(--space-1);">
+        <label class="editor-slider-label" style="font-size:10px;">Size</label>
+        <input type="range" class="slider" id="mask-size" min="2" max="100" value="20" style="width:100%;height:4px;">
+        <div style="font-size:10px;text-align:center;color:var(--text-tertiary);" id="mask-size-value">20px</div>
+      </div>
+      <div style="height:1px;background:var(--border-default);margin:var(--space-1) 0;"></div>
+      <button class="editor-mask-btn" id="mask-undo" title="Undo Mask">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+      </button>
+      <button class="editor-mask-btn" id="mask-redo" title="Redo Mask">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      </button>
+      <button class="editor-mask-btn" id="mask-clear" title="Clear Mask">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <!-- Image Info -->
+    <div class="editor-image-info" id="editor-image-info-container" style="display:none;">
+      <span class="editor-image-info-text" id="editor-image-info">0 × 0px</span>
+    </div>
+
+    <!-- Zoom Controls -->
+    <div class="editor-zoom-controls">
+      <button class="editor-zoom-btn" onclick="zoomOut()" title="Zoom Out">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+      <span class="editor-zoom-level" id="zoom-level">100%</span>
+      <button class="editor-zoom-btn" onclick="zoomIn()" title="Zoom In">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+      <button class="editor-zoom-btn" onclick="fitCanvasToView()" title="Fit to View">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+      </button>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="editor-loading" id="editor-loading" style="display:none;">
+      <div class="spinner spinner-lg" style="border-color:rgba(255,255,255,0.3);border-top-color:#fff;"></div>
+      <div class="editor-loading-text" id="editor-loading-text">Processing...</div>
+    </div>
+  </div>
+
+  <!-- ===== RIGHT PANEL: SETTINGS & AI ===== -->
+  <div class="editor-panel-right">
+    <!-- Tabs -->
+    <div class="editor-panel-tabs">
+      <button class="editor-panel-tab active" data-tab="tools">Adjust</button>
+      <button class="editor-panel-tab" data-tab="ai">AI Edit</button>
+      <button class="editor-panel-tab" data-tab="versions">Versions</button>
+    </div>
+
+    <div class="editor-panel-content">
+      <!-- Tab: Adjustments -->
+      <div class="editor-panel-tab-content active" id="tab-tools">
+        <div class="editor-ai-prompt">
+          <div class="editor-panel-title">Quick Adjustments</div>
+
+          <!-- Brightness -->
+          <div class="editor-slider-group">
+            <div class="editor-slider-header">
+              <span class="editor-slider-label">☀️ Brightness</span>
+              <span class="editor-slider-value" id="right-brightness-value">1.00</span>
+            </div>
+            <input type="range" class="slider editor-slider" id="right-brightness-slider" min="10" max="300" value="100" step="1">
+          </div>
+
+          <!-- Contrast -->
+          <div class="editor-slider-group">
+            <div class="editor-slider-header">
+              <span class="editor-slider-label">◐ Contrast</span>
+              <span class="editor-slider-value" id="right-contrast-value">1.00</span>
+            </div>
+            <input type="range" class="slider editor-slider" id="right-contrast-slider" min="10" max="300" value="100" step="1">
+          </div>
+
+          <!-- Saturation -->
+          <div class="editor-slider-group">
+            <div class="editor-slider-header">
+              <span class="editor-slider-label">💧 Saturation</span>
+              <span class="editor-slider-value" id="right-saturation-value">1.00</span>
+            </div>
+            <input type="range" class="slider editor-slider" id="right-saturation-slider" min="0" max="300" value="100" step="1">
+          </div>
+
+          <button class="btn btn-primary btn-sm" id="right-apply-btn" style="width:100%;margin-top:var(--space-2);">
+            Apply All Adjustments
+          </button>
+          <button class="btn btn-ghost btn-sm" id="right-reset-btn" style="width:100%;margin-top:var(--space-1);">
+            Reset to Default
+          </button>
+        </div>
+      </div>
+
+      <!-- Tab: AI Edit -->
+      <div class="editor-panel-tab-content" id="tab-ai">
+        <div class="editor-ai-prompt">
+          <div class="editor-panel-title">AI Editing</div>
+
+          <!-- Prompt Input -->
+          <div class="form-group" style="margin-bottom:var(--space-3);">
+            <textarea id="ai-prompt" class="textarea" style="min-height:80px;" placeholder="Describe what you want to change..."></textarea>
+            <div class="form-hint">Be specific about the desired outcome.</div>
+          </div>
+
+          <!-- AI Tool Actions -->
+          <div class="editor-ai-actions">
+            <!-- Inpaint -->
+            <button class="editor-ai-action-btn" data-ai-tool="inpaint" data-requires-ai>
+              <div class="editor-ai-action-icon" style="background:rgba(225,112,85,0.1);color:#e17055;">🎨</div>
+              <div class="editor-ai-action-text">
+                <div class="editor-ai-action-title">Inpaint</div>
+                <div class="editor-ai-action-desc">Replace masked area with AI content</div>
+              </div>
+            </button>
+
+            <!-- Object Replacement -->
+            <button class="editor-ai-action-btn" data-ai-tool="retexture" data-requires-ai>
+              <div class="editor-ai-action-icon" style="background:rgba(108,92,231,0.1);color:#6c5ce7;">✨</div>
+              <div class="editor-ai-action-text">
+                <div class="editor-ai-action-title">Retexture / Restyle</div>
+                <div class="editor-ai-action-desc">Change the style or texture of the image</div>
+              </div>
+            </button>
+
+            <!-- Background Replace -->
+            <button class="editor-ai-action-btn" data-ai-tool="background_replace" data-requires-ai>
+              <div class="editor-ai-action-icon" style="background:rgba(0,184,148,0.1);color:#00b894;">🌿</div>
+              <div class="editor-ai-action-text">
+                <div class="editor-ai-action-title">Background Replace</div>
+                <div class="editor-ai-action-desc">Replace the background with a new scene</div>
+              </div>
+            </button>
+
+            <!-- Outpaint -->
+            <button class="editor-ai-action-btn" data-ai-tool="outpaint" data-requires-ai>
+              <div class="editor-ai-action-icon" style="background:rgba(9,132,227,0.1);color:#0984e3;">📐</div>
+              <div class="editor-ai-action-text">
+                <div class="editor-ai-action-title">Outpaint</div>
+                <div class="editor-ai-action-desc">Extend the image in any direction</div>
+              </div>
+            </button>
+          </div>
+
+          <!-- Outpaint Direction (shown when outpaint selected) -->
+          <div class="editor-ai-section" id="ai-section-outpaint" style="display:none;margin-top:var(--space-4);">
+            <div class="editor-panel-title">Extension Direction</div>
+            <div class="editor-outpaint-directions">
+              <div></div>
+              <button class="editor-outpaint-dir" data-outpaint-dir="top" title="Top">↑</button>
+              <div></div>
+              <button class="editor-outpaint-dir" data-outpaint-dir="left" title="Left">←</button>
+              <div class="editor-outpaint-dir editor-outpaint-center" style="cursor:default;">📷</div>
+              <button class="editor-outpaint-dir active" data-outpaint-dir="right" title="Right">→</button>
+              <div></div>
+              <button class="editor-outpaint-dir" data-outpaint-dir="bottom" title="Bottom">↓</button>
+              <div></div>
+            </div>
+          </div>
+
+          <!-- Retexture Strength -->
+          <div class="editor-ai-section" id="ai-section-retexture" style="display:none;margin-top:var(--space-4);">
+            <div class="editor-panel-title">Style Strength</div>
+            <div class="editor-slider-group">
+              <div class="editor-slider-header">
+                <span class="editor-slider-label">Strength</span>
+                <span class="editor-slider-value" id="retexture-strength-value">0.70</span>
+              </div>
+              <input type="range" class="slider" id="retexture-strength" min="0" max="100" value="70">
+            </div>
+          </div>
+
+          <!-- Submit Button -->
+          <button class="btn btn-primary" id="ai-submit-btn" style="width:100%;margin-top:var(--space-4);padding:0.75rem;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            Run AI Edit
+          </button>
+        </div>
+      </div>
+
+      <!-- Tab: Versions -->
+      <div class="editor-panel-tab-content" id="tab-versions">
+        <div class="editor-version-list" id="version-list">
+          <div class="editor-empty-state" style="padding:var(--space-6);">
+            <p class="text-sm text-muted">No version history yet</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/editor.js') }}"></script>
+<script>
+  // Sync right panel sliders with left panel and state
+  (function() {
+    const state = window.EditorState;
+    if (!state) return;
+
+    // Right panel brightness
+    const rBright = document.getElementById('right-brightness-slider');
+    const rBrightVal = document.getElementById('right-brightness-value');
+    if (rBright) {
+      rBright.addEventListener('input', () => {
+        const v = parseFloat(rBright.value);
+        state.brightness = v / 100;
+        if (rBrightVal) rBrightVal.textContent = state.brightness.toFixed(2);
+        // Sync left panel
+        const lSlider = document.getElementById('brightness-slider');
+        const lValue = document.getElementById('brightness-value');
+        if (lSlider) lSlider.value = v;
+        if (lValue) lValue.textContent = state.brightness.toFixed(2);
+        // Preview
+        const img = document.getElementById('editor-canvas-img');
+        if (img) {
+          const filters = [];
+          if (state.brightness !== 1.0) filters.push(`brightness(${state.brightness})`);
+          if (state.contrast !== 1.0) filters.push(`contrast(${state.contrast})`);
+          if (state.saturation !== 1.0) filters.push(`saturate(${state.saturation})`);
+          img.style.filter = filters.length ? filters.join(' ') : 'none';
+        }
+      });
+    }
+
+    // Right panel contrast
+    const rContrast = document.getElementById('right-contrast-slider');
+    const rContrastVal = document.getElementById('right-contrast-value');
+    if (rContrast) {
+      rContrast.addEventListener('input', () => {
+        const v = parseFloat(rContrast.value);
+        state.contrast = v / 100;
+        if (rContrastVal) rContrastVal.textContent = state.contrast.toFixed(2);
+        const lSlider = document.getElementById('contrast-slider');
+        const lValue = document.getElementById('contrast-value');
+        if (lSlider) lSlider.value = v;
+        if (lValue) lValue.textContent = state.contrast.toFixed(2);
+        const img = document.getElementById('editor-canvas-img');
+        if (img) {
+          const filters = [];
+          if (state.brightness !== 1.0) filters.push(`brightness(${state.brightness})`);
+          if (state.contrast !== 1.0) filters.push(`contrast(${state.contrast})`);
+          if (state.saturation !== 1.0) filters.push(`saturate(${state.saturation})`);
+          img.style.filter = filters.length ? filters.join(' ') : 'none';
+        }
+      });
+    }
+
+    // Right panel saturation
+    const rSat = document.getElementById('right-saturation-slider');
+    const rSatVal = document.getElementById('right-saturation-value');
+    if (rSat) {
+      rSat.addEventListener('input', () => {
+        const v = parseFloat(rSat.value);
+        state.saturation = v / 100;
+        if (rSatVal) rSatVal.textContent = state.saturation.toFixed(2);
+        const lSlider = document.getElementById('saturation-slider');
+        const lValue = document.getElementById('saturation-value');
+        if (lSlider) lSlider.value = v;
+        if (lValue) lValue.textContent = state.saturation.toFixed(2);
+        const img = document.getElementById('editor-canvas-img');
+        if (img) {
+          const filters = [];
+          if (state.brightness !== 1.0) filters.push(`brightness(${state.brightness})`);
+          if (state.contrast !== 1.0) filters.push(`contrast(${state.contrast})`);
+          if (state.saturation !== 1.0) filters.push(`saturate(${state.saturation})`);
+          img.style.filter = filters.length ? filters.join(' ') : 'none';
+        }
+      });
+    }
+
+    // Apply button
+    document.getElementById('right-apply-btn')?.addEventListener('click', () => {
+      document.getElementById('apply-local-btn')?.click();
+    });
+
+    // Reset button
+    document.getElementById('right-reset-btn')?.addEventListener('click', () => {
+      state.brightness = 1.0;
+      state.contrast = 1.0;
+      state.saturation = 1.0;
+
+      ['brightness', 'contrast', 'saturation'].forEach(name => {
+        const rSlider = document.getElementById(`right-${name}-slider`);
+        const rValue = document.getElementById(`right-${name}-value`);
+        const lSlider = document.getElementById(`${name}-slider`);
+        const lValue = document.getElementById(`${name}-value`);
+        if (rSlider) rSlider.value = 100;
+        if (rValue) rValue.textContent = '1.00';
+        if (lSlider) lSlider.value = 100;
+        if (lValue) lValue.textContent = '1.00';
+      });
+
+      const img = document.getElementById('editor-canvas-img');
+      if (img) img.style.filter = 'none';
+
+      Toast.info('Adjustments reset to default');
+    });
+
+    // Retexture strength
+    document.getElementById('retexture-strength')?.addEventListener('input', function() {
+      document.getElementById('retexture-strength-value').textContent = (this.value / 100).toFixed(2);
+    });
+
+    // Show image info when image loads
+    const canvasImg = document.getElementById('editor-canvas-img');
+    if (canvasImg) {
+      const observer = new MutationObserver(() => {
+        const infoContainer = document.getElementById('editor-image-info-container');
+        if (canvasImg.src && canvasImg.style.display !== 'none') {
+          if (infoContainer) infoContainer.style.display = 'flex';
+        }
+      });
+      observer.observe(canvasImg, { attributes: true, attributeFilter: ['src', 'style'] });
+    }
+
+    // Zoom functions
+    window.zoomIn = function() {
+      const img = document.getElementById('editor-canvas-img');
+      if (!img) return;
+      state.zoom = Math.min(state.zoom + 0.1, 3);
+      img.style.transform = `scale(${state.zoom})`;
+      document.getElementById('zoom-level').textContent = Math.round(state.zoom * 100) + '%';
+    };
+
+    window.zoomOut = function() {
+      const img = document.getElementById('editor-canvas-img');
+      if (!img) return;
+      state.zoom = Math.max(state.zoom - 0.1, 0.1);
+      img.style.transform = `scale(${state.zoom})`;
+      document.getElementById('zoom-level').textContent = Math.round(state.zoom * 100) + '%';
+    };
+
+    window.fitCanvasToView = function() {
+      const container = document.getElementById('editor-canvas-container');
+      const img = document.getElementById('editor-canvas-img');
+      if (!container || !img) return;
+
+      const containerW = container.clientWidth - 32;
+      const containerH = container.clientHeight - 32;
+
+      if (state.imageWidth > 0 && state.imageHeight > 0) {
+        const scaleX = containerW / state.imageWidth;
+        const scaleY = containerH / state.imageHeight;
+        state.zoom = Math.min(scaleX, scaleY, 1);
+      } else {
+        state.zoom = 1;
+      }
+
+      img.style.transform = `scale(${state.zoom})`;
+      document.getElementById('zoom-level').textContent = Math.round(state.zoom * 100) + '%';
+    };
+
+    // Sync left panel tool settings visibility with hint
+    const observer2 = new MutationObserver(() => {
+      const hint = document.getElementById('no-tool-hint');
+      if (!hint) return;
+      const anyVisible = document.querySelectorAll('.editor-tool-settings[style*="block"]').length > 0;
+      hint.style.display = anyVisible ? 'none' : 'block';
+    });
+
+    document.querySelectorAll('.editor-tool-settings').forEach(el => {
+      observer2.observe(el, { attributes: true, attributeFilter: ['style'] });
+    });
+
+  })();
+</script>
+{% endblock %}

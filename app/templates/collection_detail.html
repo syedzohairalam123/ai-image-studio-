@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+{% block title %}{{ collection.name }} — AI Studio{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/gallery.css') }}">
+{% endblock %}
+
+{% block header_left %}
+<div class="flex items-center gap-2">
+  <a href="/collections" class="btn btn-ghost btn-sm" style="padding:var(--space-1);">←</a>
+  <h4 style="font-size:var(--text-base);font-weight:var(--weight-semibold);">{{ collection.name }}</h4>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="gallery-page">
+  <!-- Header -->
+  <div class="gallery-header">
+    <div class="gallery-header-left">
+      <h3>{{ collection.name }}</h3>
+      {% if collection.description %}
+      <p class="text-sm text-muted">{{ collection.description }}</p>
+      {% endif %}
+      <span class="gallery-count" id="image-count">Loading...</span>
+    </div>
+    <div class="gallery-header-right">
+      <button class="btn btn-ghost btn-sm" onclick="editCollection()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        Edit
+      </button>
+      <button class="btn btn-ghost btn-sm danger" onclick="confirmDelete()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        Delete
+      </button>
+    </div>
+  </div>
+
+  <!-- Gallery Grid -->
+  <div class="gallery-grid" id="collection-grid"></div>
+
+  <!-- Empty State -->
+  <div class="empty-state" id="collection-empty" style="display:none;">
+    <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+    </svg>
+    <h4 class="empty-state-title">This collection is empty</h4>
+    <p class="empty-state-description">Add images from the gallery to this collection.</p>
+    <a href="/gallery" class="btn btn-primary">Go to Gallery</a>
+  </div>
+</div>
+
+<!-- Edit Collection Modal -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h4 class="modal-title">Edit Collection</h4>
+      <button class="btn btn-ghost btn-sm" onclick="hideEditModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group mb-4">
+        <label class="form-label" for="edit-name">Name</label>
+        <input type="text" id="edit-name" class="input" maxlength="200">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="edit-desc">Description</label>
+        <textarea id="edit-desc" class="textarea" style="min-height:80px;"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="hideEditModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Delete Dialog -->
+<div class="gallery-confirm-overlay" id="confirm-delete-overlay">
+  <div class="gallery-confirm-dialog">
+    <div class="gallery-confirm-icon">🗑️</div>
+    <h4 class="gallery-confirm-title">Delete Collection?</h4>
+    <p class="gallery-confirm-text">This will delete the collection. The images inside will NOT be deleted.</p>
+    <div class="gallery-confirm-actions">
+      <button class="btn btn-secondary" onclick="hideConfirmDelete()">Cancel</button>
+      <button class="btn btn-danger" onclick="executeDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  'use strict';
+
+  const collectionId = {{ collection.id }};
+  let images = [];
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadCollectionImages();
+  });
+
+  async function loadCollectionImages() {
+    try {
+      const resp = await fetch(`/api/v1/collections/${collectionId}`);
+      if (!resp.ok) throw new Error('Failed');
+      const data = await resp.json();
+      images = data.collection.images || [];
+
+      if (images.length === 0) {
+        document.getElementById('collection-empty').style.display = 'flex';
+        document.getElementById('collection-grid').style.display = 'none';
+      } else {
+        document.getElementById('collection-empty').style.display = 'none';
+        document.getElementById('collection-grid').style.display = 'grid';
+        renderImages();
+      }
+
+      document.getElementById('image-count').textContent = `${images.length} image${images.length !== 1 ? 's' : ''}`;
+    } catch (err) {
+      Toast.error('Failed to load collection images');
+    }
+  }
+
+  function renderImages() {
+    const grid = document.getElementById('collection-grid');
+    grid.innerHTML = '';
+
+    images.forEach(img => {
+      const card = document.createElement('div');
+      card.className = 'gallery-card';
+
+      const date = img.created_at ? new Date(img.created_at).toLocaleDateString() : '';
+
+      card.innerHTML = `
+        <div class="gallery-card-image-wrapper">
+          <img class="gallery-card-image" src="${img.thumb_url || img.url}" alt="${escapeHtml(img.title || 'Image')}" loading="lazy">
+          <button class="gallery-card-favorite ${img.is_favorite ? 'favorited' : ''}" onclick="event.stopPropagation(); toggleFavorite(${img.id})" title="Toggle favorite">
+            <svg viewBox="0 0 24 24" fill="${img.is_favorite ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </button>
+          <div class="gallery-card-actions">
+            <button class="gallery-card-action" onclick="event.stopPropagation(); openImage(${img.id})" title="Open">Open</button>
+            <button class="gallery-card-action" onclick="event.stopPropagation(); removeFromCollection(${img.id})" title="Remove">Remove</button>
+          </div>
+        </div>
+        <div class="gallery-card-info">
+          <div class="gallery-card-title">${escapeHtml(img.title || img.prompt || img.filename)}</div>
+          <div class="gallery-card-meta"><span>${date}</span></div>
+        </div>
+      `;
+
+      card.addEventListener('click', () => { window.location.href = `/images/${img.id}`; });
+      grid.appendChild(card);
+    });
+  }
+
+  window.toggleFavorite = async function(id) {
+    try {
+      const resp = await fetch(`/api/v1/images/${id}/favorite`, { method: 'POST' });
+      const data = await resp.json();
+      const img = images.find(i => i.id === id);
+      if (img) img.is_favorite = data.is_favorite;
+      renderImages();
+    } catch (err) { Toast.error('Failed'); }
+  };
+
+  window.openImage = function(id) { window.location.href = `/images/${id}`; };
+
+  window.removeFromCollection = async function(imageId) {
+    try {
+      const resp = await fetch(`/api/v1/collections/${collectionId}/images/${imageId}`, { method: 'DELETE' });
+      if (!resp.ok) throw new Error('Failed');
+      Toast.success('Removed from collection');
+      loadCollectionImages();
+    } catch (err) { Toast.error('Failed to remove'); }
+  };
+
+  // ---- Edit Modal ----
+  window.editCollection = function() {
+    document.getElementById('edit-name').value = '{{ collection.name }}';
+    document.getElementById('edit-desc').value = '{{ collection.description or "" }}';
+    document.getElementById('edit-modal').classList.add('active');
+  };
+
+  window.hideEditModal = function() { document.getElementById('edit-modal').classList.remove('active'); };
+
+  window.saveEdit = async function() {
+    const name = document.getElementById('edit-name').value.trim();
+    const description = document.getElementById('edit-desc').value.trim();
+    if (!name) { Toast.warning('Name is required'); return; }
+
+    try {
+      const resp = await fetch(`/api/v1/collections/${collectionId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, description }),
+      });
+      if (!resp.ok) throw new Error('Failed');
+      Toast.success('Collection updated');
+      hideEditModal();
+      document.querySelector('h3').textContent = name;
+    } catch (err) { Toast.error('Failed to update'); }
+  };
+
+  // ---- Delete ----
+  window.confirmDelete = function() {
+    document.getElementById('confirm-delete-overlay').classList.add('active');
+  };
+
+  window.hideConfirmDelete = function() {
+    document.getElementById('confirm-delete-overlay').classList.remove('active');
+  };
+
+  window.executeDelete = async function() {
+    try {
+      const resp = await fetch(`/api/v1/collections/${collectionId}`, { method: 'DELETE' });
+      if (!resp.ok) throw new Error('Failed');
+      Toast.success('Collection deleted');
+      window.location.href = '/collections';
+    } catch (err) { Toast.error('Failed to delete'); }
+  };
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { hideEditModal(); hideConfirmDelete(); }
+  });
+
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,460 @@
+{% extends "base.html" %}
+{% block title %}Explore — AI Studio{% endblock %}
+
+{% block content %}
+<div class="explore-page">
+  <!-- Explore Header -->
+  <div class="explore-header">
+    <div>
+      <h3 style="margin-bottom:var(--space-1);">Explore</h3>
+      <p class="text-sm text-muted">Discover inspiring AI-generated artwork from the community</p>
+    </div>
+    <div class="explore-search">
+      <div class="search-input-wrapper">
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" class="input search-input" id="explore-search" placeholder="Search artwork, prompts, styles..." autocomplete="off">
+      </div>
+    </div>
+  </div>
+
+  <!-- Categories -->
+  <div class="explore-categories" id="categories-bar">
+    <button class="chip chip-active category-chip" data-category="all" onclick="selectCategory('all', this)">
+      🌐 All
+    </button>
+    <!-- Categories loaded dynamically -->
+  </div>
+
+  <!-- Sort & Filter Bar -->
+  <div class="explore-toolbar">
+    <div class="explore-sort">
+      <button class="chip chip-active sort-chip" data-sort="recent" onclick="selectSort('recent', this)">Recent</button>
+      <button class="chip sort-chip" data-sort="popular" onclick="selectSort('popular', this)">Popular</button>
+      <button class="chip sort-chip" data-sort="liked" onclick="selectSort('liked', this)">Most Liked</button>
+    </div>
+    <div class="explore-style-filter">
+      <select class="select" id="style-filter" onchange="selectStyle(this.value)" style="width:auto;min-width:160px;">
+        <option value="">All Styles</option>
+        <!-- Styles loaded dynamically -->
+      </select>
+    </div>
+  </div>
+
+  <!-- Results Count -->
+  <div class="explore-results-info" id="results-info" style="margin-bottom:var(--space-4);">
+    <span class="text-sm text-muted" id="results-count"></span>
+  </div>
+
+  <!-- Gallery Grid -->
+  <div class="gallery-grid" id="explore-grid">
+    <!-- Images loaded dynamically -->
+  </div>
+
+  <!-- Empty State -->
+  <div class="empty-state" id="empty-state" style="display:none;">
+    <div class="empty-state-icon">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </div>
+    <h4 class="empty-state-title">No images found</h4>
+    <p class="empty-state-description">Try adjusting your search or filters to find more content.</p>
+  </div>
+
+  <!-- Loading Skeleton -->
+  <div class="gallery-grid" id="loading-skeleton" style="display:none;">
+    <div class="image-card"><div class="skeleton skeleton-image"></div><div class="image-card-info"><div class="skeleton skeleton-text"></div></div></div>
+    <div class="image-card"><div class="skeleton skeleton-image"></div><div class="image-card-info"><div class="skeleton skeleton-text"></div></div></div>
+    <div class="image-card"><div class="skeleton skeleton-image"></div><div class="image-card-info"><div class="skeleton skeleton-text"></div></div></div>
+    <div class="image-card"><div class="skeleton skeleton-image"></div><div class="image-card-info"><div class="skeleton skeleton-text"></div></div></div>
+    <div class="image-card"><div class="skeleton skeleton-image"></div><div class="image-card-info"><div class="skeleton skeleton-text"></div></div></div>
+    <div class="image-card"><div class="skeleton skeleton-image"></div><div class="image-card-info"><div class="skeleton skeleton-text"></div></div></div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="explore-pagination" id="pagination" style="display:none;margin-top:var(--space-6);text-align:center;">
+    <button class="btn btn-secondary btn-sm" id="prev-btn" onclick="changePage(-1)" disabled>← Previous</button>
+    <span class="text-sm text-muted" id="page-info" style="margin:0 var(--space-4);"></span>
+    <button class="btn btn-secondary btn-sm" id="next-btn" onclick="changePage(1)">Next →</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block head_extra %}
+<style>
+  .explore-page {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  .explore-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: var(--space-5);
+    gap: var(--space-4);
+    flex-wrap: wrap;
+  }
+  .explore-search {
+    flex: 1;
+    max-width: 400px;
+  }
+  .search-input-wrapper {
+    position: relative;
+  }
+  .search-icon {
+    position: absolute;
+    left: var(--space-3);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-tertiary);
+    pointer-events: none;
+  }
+  .search-input {
+    padding-left: var(--space-10);
+  }
+
+  .explore-categories {
+    display: flex;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+    overflow-x: auto;
+    padding-bottom: var(--space-2);
+    -webkit-overflow-scrolling: touch;
+  }
+  .category-chip {
+    white-space: nowrap;
+    cursor: pointer;
+    border: 1px solid var(--border-default);
+    background: var(--bg-primary);
+    transition: all var(--transition-fast);
+  }
+  .category-chip:hover {
+    border-color: var(--border-strong);
+  }
+
+  .explore-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-4);
+    gap: var(--space-3);
+    flex-wrap: wrap;
+  }
+  .explore-sort {
+    display: flex;
+    gap: var(--space-2);
+  }
+  .sort-chip {
+    cursor: pointer;
+    border: 1px solid var(--border-default);
+    background: var(--bg-primary);
+    transition: all var(--transition-fast);
+  }
+  .sort-chip:hover {
+    border-color: var(--border-strong);
+  }
+
+  /* Explore Image Card */
+  .explore-card {
+    position: relative;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: var(--surface-card);
+    border: 1px solid var(--border-default);
+    transition: all var(--transition-fast);
+    cursor: pointer;
+  }
+  .explore-card:hover {
+    box-shadow: var(--shadow-lg);
+    border-color: var(--border-brand);
+    transform: translateY(-2px);
+  }
+  .explore-card-image {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    background: var(--bg-tertiary);
+    display: block;
+  }
+  .explore-card-info {
+    padding: var(--space-3);
+  }
+  .explore-card-title {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    color: var(--text-primary);
+    margin-bottom: var(--space-1);
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .explore-card-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+  }
+  .explore-card-creator {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+  }
+  .explore-card-creator-avatar {
+    width: 18px;
+    height: 18px;
+    border-radius: var(--radius-full);
+    background: var(--brand-100);
+    color: var(--brand-700);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: var(--weight-bold);
+  }
+  [data-theme="dark"] .explore-card-creator-avatar {
+    background: var(--brand-900);
+    color: var(--brand-200);
+  }
+  .explore-card-stats {
+    display: flex;
+    gap: var(--space-2);
+  }
+  .explore-card-stat {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  /* Detail Modal */
+  .explore-detail-modal .modal {
+    max-width: 800px;
+  }
+  .explore-detail-layout {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: var(--space-5);
+  }
+  .explore-detail-image {
+    width: 100%;
+    border-radius: var(--radius-lg);
+    background: var(--bg-tertiary);
+  }
+  .explore-detail-info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  @media (max-width: 768px) {
+    .explore-header {
+      flex-direction: column;
+    }
+    .explore-search {
+      max-width: 100%;
+    }
+    .explore-detail-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  'use strict';
+
+  let currentPage = 1;
+  let currentSearch = '';
+  let currentCategory = 'all';
+  let currentStyle = '';
+  let currentSort = 'recent';
+  let totalPages = 1;
+
+  // Toast
+  const Toast = {
+    container: document.getElementById('toast-container'),
+    show(msg, type, duration) {
+      duration = duration || 4000;
+      const icons = { success: '✓', error: '✕', warning: '⚠', info: 'ℹ' };
+      const toast = document.createElement('div');
+      toast.className = 'toast toast-' + (type || 'info');
+      toast.innerHTML = '<span style="font-size:16px;font-weight:bold;">' + (icons[type] || icons.info) + '</span><span>' + msg + '</span><button class="toast-close" onclick="this.closest(\'.toast\').remove()">✕</button>';
+      this.container.appendChild(toast);
+      setTimeout(() => { toast.classList.add('toast-exit'); setTimeout(() => toast.remove(), 300); }, duration);
+    },
+    success(m) { this.show(m, 'success'); },
+    error(m) { this.show(m, 'error', 6000); }
+  };
+
+  // Load categories
+  async function loadCategories() {
+    try {
+      const resp = await fetch('/api/v1/explore/categories');
+      const data = await resp.json();
+      const bar = document.getElementById('categories-bar');
+      bar.innerHTML = '';
+      (data.categories || []).forEach(cat => {
+        const chip = document.createElement('button');
+        chip.className = 'chip category-chip' + (cat.id === currentCategory ? ' chip-active' : '');
+        chip.dataset.category = cat.id;
+        chip.onclick = () => selectCategory(cat.id, chip);
+        chip.textContent = cat.icon + ' ' + cat.name + (cat.count > 0 ? ' (' + cat.count + ')' : '');
+        bar.appendChild(chip);
+      });
+    } catch (err) {
+      // Fallback categories
+    }
+  }
+
+  // Load styles
+  async function loadStyles() {
+    try {
+      const resp = await fetch('/api/v1/explore/styles');
+      const data = await resp.json();
+      const select = document.getElementById('style-filter');
+      select.innerHTML = '<option value="">All Styles</option>';
+      (data.styles || []).forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.style;
+        opt.textContent = s.style + ' (' + s.count + ')';
+        if (s.style === currentStyle) opt.selected = true;
+        select.appendChild(opt);
+      });
+    } catch (err) {
+      // Fallback
+    }
+  }
+
+  // Load images
+  async function loadImages() {
+    const grid = document.getElementById('explore-grid');
+    const empty = document.getElementById('empty-state');
+    const skeleton = document.getElementById('loading-skeleton');
+    const pagination = document.getElementById('pagination');
+
+    skeleton.style.display = 'grid';
+    grid.innerHTML = '';
+    empty.style.display = 'none';
+
+    try {
+      const params = new URLSearchParams();
+      if (currentSearch) params.set('search', currentSearch);
+      if (currentCategory && currentCategory !== 'all') params.set('category', currentCategory);
+      if (currentStyle) params.set('style', currentStyle);
+      params.set('sort', currentSort);
+      params.set('page', currentPage);
+      params.set('per_page', 24);
+
+      const resp = await fetch('/api/v1/explore?' + params.toString());
+      const data = await resp.json();
+
+      skeleton.style.display = 'none';
+      totalPages = data.pages || 1;
+
+      document.getElementById('results-count').textContent =
+        data.total + ' image' + (data.total !== 1 ? 's' : '') + ' found';
+
+      if (!data.images || data.images.length === 0) {
+        empty.style.display = 'flex';
+        pagination.style.display = 'none';
+        return;
+      }
+
+      data.images.forEach(img => {
+        const card = document.createElement('div');
+        card.className = 'explore-card';
+        card.onclick = () => showDetail(img.id || img.url);
+
+        const creatorInitial = img.creator_display_name ? img.creator_display_name[0].toUpperCase() : '?';
+        card.innerHTML =
+          '<img class="explore-card-image" src="' + (img.thumb_url || img.image_url) + '" alt="' + (img.title || 'AI image') + '" loading="lazy">' +
+          '<div class="explore-card-info">' +
+            '<div class="explore-card-title">' + (img.title || img.public_prompt || 'Untitled') + '</div>' +
+            '<div class="explore-card-meta">' +
+              '<div class="explore-card-creator">' +
+                '<div class="explore-card-creator-avatar">' + creatorInitial + '</div>' +
+                '<span>' + (img.creator_display_name || 'Anonymous') + '</span>' +
+              '</div>' +
+              '<div class="explore-card-stats">' +
+                '<span class="explore-card-stat">👁 ' + (img.view_count || 0) + '</span>' +
+                '<span class="explore-card-stat">♥ ' + (img.like_count || 0) + '</span>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+
+        grid.appendChild(card);
+      });
+
+      // Pagination
+      if (totalPages > 1) {
+        pagination.style.display = 'block';
+        document.getElementById('page-info').textContent = 'Page ' + currentPage + ' of ' + totalPages;
+        document.getElementById('prev-btn').disabled = currentPage <= 1;
+        document.getElementById('next-btn').disabled = currentPage >= totalPages;
+      } else {
+        pagination.style.display = 'none';
+      }
+
+    } catch (err) {
+      skeleton.style.display = 'none';
+      empty.style.display = 'flex';
+    }
+  }
+
+  // Show detail modal
+  function showDetail(shareToken) {
+    // For now, navigate to the share page
+    window.location.href = '/share/' + shareToken;
+  }
+
+  // Search
+  let searchTimeout;
+  document.getElementById('explore-search').addEventListener('input', function(e) {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      currentSearch = e.target.value.trim();
+      currentPage = 1;
+      loadImages();
+    }, 400);
+  });
+
+  // Category select
+  window.selectCategory = function(catId, chip) {
+    currentCategory = catId;
+    currentPage = 1;
+    document.querySelectorAll('.category-chip').forEach(c => c.classList.remove('chip-active'));
+    if (chip) chip.classList.add('chip-active');
+    loadImages();
+  };
+
+  // Sort select
+  window.selectSort = function(sort, chip) {
+    currentSort = sort;
+    currentPage = 1;
+    document.querySelectorAll('.sort-chip').forEach(c => c.classList.remove('chip-active'));
+    if (chip) chip.classList.add('chip-active');
+    loadImages();
+  };
+
+  // Style filter
+  window.selectStyle = function(style) {
+    currentStyle = style;
+    currentPage = 1;
+    loadImages();
+  };
+
+  // Pagination
+  window.changePage = function(delta) {
+    currentPage = Math.max(1, Math.min(totalPages, currentPage + delta));
+    loadImages();
+    window.scrollTo(0, 0);
+  };
+
+  // Init
+  loadCategories();
+  loadStyles();
+  loadImages();
+})();
+</script>
+{% endblock %}

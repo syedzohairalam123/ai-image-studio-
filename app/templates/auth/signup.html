@@ -1,0 +1,40 @@
+{% extends "auth/base.html" %}
+{% block title %}Sign Up — AI Studio{% endblock %}
+
+{% block auth_header %}
+<h2>Create your account</h2>
+<p>Start generating stunning images with AI</p>
+{% endblock %}
+
+{% block auth_content %}
+<form class="auth-form" method="POST" action="/signup" novalidate>
+  <div class="form-group">
+    <label class="form-label" for="email">Email</label>
+    <input type="email" id="email" name="email" class="input {% if errors and errors.email %}input-error{% endif %}"
+           value="{{ data.email if data else '' }}" placeholder="you@example.com" autocomplete="email" required>
+    {% if errors and errors.email %}<div class="field-error">{{ errors.email }}</div>{% endif %}
+  </div>
+
+  <div class="form-group">
+    <label class="form-label" for="username">Username</label>
+    <input type="text" id="username" name="username" class="input {% if errors and errors.username %}input-error{% endif %}"
+           value="{{ data.username if data else '' }}" placeholder="Choose a username" autocomplete="username" required>
+    {% if errors and errors.username %}<div class="field-error">{{ errors.username }}</div>{% endif %}
+  </div>
+
+  <div class="form-group">
+    <label class="form-label" for="password">Password</label>
+    <input type="password" id="password" name="password" class="input {% if errors and errors.password %}input-error{% endif %}"
+           placeholder="At least 8 characters" autocomplete="new-password" required minlength="8">
+    {% if errors and errors.password %}<div class="field-error">{{ errors.password }}</div>{% endif %}
+  </div>
+
+  <button type="submit" class="btn btn-primary btn-lg">Create Account</button>
+</form>
+{% endblock %}
+
+{% block auth_footer %}
+<div class="auth-footer">
+  Already have an account? <a href="/login">Sign in</a>
+</div>
+{% endblock %}

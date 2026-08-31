@@ -1,0 +1,411 @@
+{% extends "base.html" %}
+{% block title %}Styles — AI Studio{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between" style="margin-bottom:var(--space-6);flex-wrap:wrap;gap:var(--space-3);">
+  <div>
+    <h3 style="margin-bottom:var(--space-2);">Style Presets</h3>
+    <p class="text-sm text-muted">Choose from curated styles or create your own</p>
+  </div>
+  <button class="btn btn-primary btn-sm" onclick="openNewPresetModal()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    New Preset
+  </button>
+</div>
+
+<!-- Tabs -->
+<div class="tabs" style="margin-bottom:var(--space-6);">
+  <button class="tab active" onclick="switchTab('categories')">Categories</button>
+  <button class="tab" onclick="switchTab('my-presets')">My Presets</button>
+</div>
+
+<!-- Categories Tab -->
+<div id="tab-categories">
+  <div id="categories-grid" class="grid grid-4" style="gap:var(--space-4);"></div>
+  <div id="categories-loading" class="grid grid-4" style="gap:var(--space-4);">
+    <div class="skeleton" style="height:120px;border-radius:var(--radius-lg);"></div>
+    <div class="skeleton" style="height:120px;border-radius:var(--radius-lg);"></div>
+    <div class="skeleton" style="height:120px;border-radius:var(--radius-lg);"></div>
+    <div class="skeleton" style="height:120px;border-radius:var(--radius-lg);"></div>
+  </div>
+</div>
+
+<!-- My Presets Tab -->
+<div id="tab-my-presets" style="display:none;">
+  <!-- Search -->
+  <div class="flex gap-3 mb-4" style="flex-wrap:wrap;">
+    <input type="text" id="preset-search" class="input" placeholder="Search presets..." style="max-width:300px;">
+    <select id="preset-category-filter" class="select" style="width:auto;">
+      <option value="">All Categories</option>
+      <option value="custom">Custom</option>
+    </select>
+  </div>
+
+  <!-- Presets Grid -->
+  <div id="presets-grid" class="grid grid-4" style="gap:var(--space-4);"></div>
+
+  <!-- Empty State -->
+  <div class="empty-state" id="presets-empty" style="display:none;">
+    <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+    </svg>
+    <h4 class="empty-state-title">No custom presets yet</h4>
+    <p class="empty-state-description">Create your own style presets to save your favorite settings.</p>
+    <button class="btn btn-primary" onclick="openNewPresetModal()">Create Your First Preset</button>
+  </div>
+</div>
+
+<!-- New/Edit Preset Modal -->
+<div class="modal-overlay" id="preset-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h4 class="modal-title" id="preset-modal-title">New Style Preset</h4>
+      <button class="btn btn-ghost btn-sm" onclick="Modal.hide('preset-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-preset-id">
+      <div class="form-group mb-4">
+        <label class="form-label" for="pm-name">Name</label>
+        <input type="text" id="pm-name" class="input" placeholder="My Photo Style">
+      </div>
+      <div class="form-group mb-4">
+        <label class="form-label" for="pm-category">Category</label>
+        <select id="pm-category" class="select">
+          <option value="custom">Custom</option>
+          <option value="photography">Photography</option>
+          <option value="digital_art">Digital Art</option>
+          <option value="traditional_art">Traditional Art</option>
+          <option value="illustration">Illustration</option>
+          <option value="cinematic">Cinematic</option>
+          <option value="architecture">Architecture</option>
+          <option value="product">Product</option>
+          <option value="minimal">Minimal</option>
+          <option value="fantasy">Fantasy</option>
+          <option value="sci_fi">Science Fiction</option>
+        </select>
+      </div>
+      <div class="form-group mb-4">
+        <label class="form-label" for="pm-style">Base Style</label>
+        <select id="pm-style" class="select">
+          <option value="">None</option>
+          <option value="photo">Photo</option>
+          <option value="art">Digital Art</option>
+          <option value="paint">Painting</option>
+          <option value="anime">Anime</option>
+          <option value="3d">3D Render</option>
+          <option value="pixel">Pixel Art</option>
+          <option value="minimal">Minimal</option>
+        </select>
+      </div>
+      <div class="form-group mb-4">
+        <label class="form-label" for="pm-prefix">Prompt Prefix</label>
+        <input type="text" id="pm-prefix" class="input" placeholder="professional, high quality">
+      </div>
+      <div class="form-group mb-4">
+        <label class="form-label" for="pm-suffix">Prompt Suffix</label>
+        <input type="text" id="pm-suffix" class="input" placeholder="8k, detailed, masterpiece">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="pm-neg">Negative Prompt</label>
+        <input type="text" id="pm-neg" class="input" placeholder="blurry, low quality">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="Modal.hide('preset-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="savePreset()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation -->
+<div class="modal-overlay confirm-dialog" id="delete-preset-modal">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-header">
+      <h4 class="modal-title">Delete Preset</h4>
+      <button class="btn btn-ghost btn-sm" onclick="Modal.hide('delete-preset-modal')">✕</button>
+    </div>
+    <div class="modal-body" style="text-align:center;">
+      <div style="width:48px;height:48px;border-radius:50%;background:var(--danger-100);color:var(--danger-600);display:flex;align-items:center;justify-content:center;margin:0 auto var(--space-4);font-size:24px;">🗑</div>
+      <p class="text-sm" style="color:var(--text-secondary);">Are you sure? This cannot be undone.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="Modal.hide('delete-preset-modal')">Cancel</button>
+      <button class="btn btn-danger" id="confirm-delete-preset-btn">Delete</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block head_extra %}
+<style>
+  .category-card {
+    background: var(--surface-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .category-card:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--border-brand);
+    transform: translateY(-2px);
+  }
+  .category-card-icon { font-size: 32px; margin-bottom: var(--space-2); }
+  .category-card-name { font-size: var(--text-sm); font-weight: var(--weight-semibold); margin-bottom: var(--space-1); }
+  .category-card-count { font-size: var(--text-xs); color: var(--text-tertiary); }
+  .preset-card {
+    background: var(--surface-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    padding: var(--space-3);
+    transition: all 0.15s;
+  }
+  .preset-card:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--border-brand);
+  }
+  .preset-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: var(--space-2);
+  }
+  .preset-card-name { font-size: var(--text-sm); font-weight: var(--weight-semibold); }
+  .preset-card-meta { font-size: var(--text-xs); color: var(--text-tertiary); margin-bottom: var(--space-2); }
+  .preset-card-actions { display: flex; gap: var(--space-1); margin-top: var(--space-2); }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  'use strict';
+
+  const API = '/api/v1';
+  const STATIC_IMG_BASE = "{{ url_for('static', filename='img') }}";
+  let currentTab = 'categories';
+  let deleteTargetId = null;
+
+  // ---- Tab Switching ----
+  window.switchTab = function(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('tab-categories').style.display = tab === 'categories' ? 'block' : 'none';
+    document.getElementById('tab-my-presets').style.display = tab === 'my-presets' ? 'block' : 'none';
+    if (tab === 'my-presets') loadPresets();
+  };
+
+  // ---- Load Categories ----
+  async function loadCategories() {
+    try {
+      const resp = await fetch(`${API}/styles/categories`);
+      if (!resp.ok) throw new Error('Failed');
+      const data = await resp.json();
+      const grid = document.getElementById('categories-grid');
+      const loading = document.getElementById('categories-loading');
+      loading.style.display = 'none';
+      grid.innerHTML = '';
+
+      data.categories.forEach(cat => {
+        const card = document.createElement('div');
+        card.className = 'category-card tilt-card';
+        card.tabIndex = 0;
+        const imgUrl = `${STATIC_IMG_BASE}/categories/${cat.id}.png`;
+        card.innerHTML = `
+          <div class="tilt-card__inner">
+            <div class="category-card-media media-shimmer">
+              <img src="${imgUrl}" alt="${escapeHtml(cat.name)} style preview" loading="lazy"
+                   onerror="this.closest('.category-card-media').innerHTML='<div class=\\'category-card-icon\\' style=\\'display:flex;align-items:center;justify-content:center;height:100%;margin:0;\\'>${cat.icon}</div>'">
+            </div>
+            <div class="category-card-name">${escapeHtml(cat.name)}</div>
+            <div class="category-card-count">${cat.styles.length} styles</div>
+          </div>
+        `;
+        card.onclick = () => {
+          Toast.info(`${cat.name}: ${cat.styles.join(', ')}`);
+        };
+        grid.appendChild(card);
+      });
+    } catch (e) {
+      document.getElementById('categories-loading').innerHTML = '<p class="text-muted">Failed to load categories</p>';
+    }
+  }
+
+  // ---- Load Presets ----
+  async function loadPresets() {
+    const search = document.getElementById('preset-search').value.trim();
+    const category = document.getElementById('preset-category-filter').value;
+
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    if (category) params.set('category', category);
+
+    try {
+      const resp = await fetch(`${API}/style-presets?${params}`);
+      if (!resp.ok) throw new Error('Failed');
+      const data = await resp.json();
+      const grid = document.getElementById('presets-grid');
+      const empty = document.getElementById('presets-empty');
+      grid.innerHTML = '';
+
+      if (data.presets.length === 0) {
+        empty.style.display = 'flex';
+        return;
+      }
+      empty.style.display = 'none';
+
+      data.presets.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'preset-card';
+        card.innerHTML = `
+          <div class="preset-card-header">
+            <span class="preset-card-name">${escapeHtml(p.name)}</span>
+          </div>
+          <div class="preset-card-meta">
+            ${p.category || 'custom'} ${p.style ? `• ${p.style}` : ''}
+          </div>
+          ${p.negative_prompt ? `<div class="text-xs text-muted" style="margin-bottom:var(--space-1);">- ${escapeHtml(p.negative_prompt.substring(0, 40))}</div>` : ''}
+          <div class="preset-card-actions">
+            <button class="btn btn-primary btn-sm" onclick="applyPreset('${escapeJs(p.style || '')}', '${escapeJs(p.negative_prompt || '')}', '${escapeJs(p.prompt_prefix || '')}', '${escapeJs(p.prompt_suffix || '')}')">Apply</button>
+            <button class="btn btn-ghost btn-sm" onclick="editPreset(${p.id}, '${escapeJs(p.name)}', '${escapeJs(p.category)}', '${escapeJs(p.style || '')}', '${escapeJs(p.prompt_prefix || '')}', '${escapeJs(p.prompt_suffix || '')}', '${escapeJs(p.negative_prompt || '')}')">Edit</button>
+            <button class="btn btn-ghost btn-sm" onclick="duplicatePreset(${p.id})">⧉</button>
+            <button class="btn btn-ghost btn-sm" onclick="confirmDeletePreset(${p.id})" style="color:var(--danger-500);">✕</button>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    } catch (e) {
+      Toast.error('Failed to load presets');
+    }
+  }
+
+  // ---- Actions ----
+  window.applyPreset = function(style, neg, prefix, suffix) {
+    const params = new URLSearchParams();
+    if (style) params.set('style', style);
+    if (neg) params.set('negative', neg);
+    if (prefix) params.set('prefix', prefix);
+    if (suffix) params.set('suffix', suffix);
+    window.location.href = `/generate?${params}`;
+  };
+
+  window.openNewPresetModal = function() {
+    document.getElementById('preset-modal-title').textContent = 'New Style Preset';
+    document.getElementById('edit-preset-id').value = '';
+    document.getElementById('pm-name').value = '';
+    document.getElementById('pm-category').value = 'custom';
+    document.getElementById('pm-style').value = '';
+    document.getElementById('pm-prefix').value = '';
+    document.getElementById('pm-suffix').value = '';
+    document.getElementById('pm-neg').value = '';
+    Modal.show('preset-modal');
+  };
+
+  window.editPreset = function(id, name, category, style, prefix, suffix, neg) {
+    document.getElementById('preset-modal-title').textContent = 'Edit Style Preset';
+    document.getElementById('edit-preset-id').value = id;
+    document.getElementById('pm-name').value = name;
+    document.getElementById('pm-category').value = category;
+    document.getElementById('pm-style').value = style;
+    document.getElementById('pm-prefix').value = prefix;
+    document.getElementById('pm-suffix').value = suffix;
+    document.getElementById('pm-neg').value = neg;
+    Modal.show('preset-modal');
+  };
+
+  window.savePreset = async function() {
+    const id = document.getElementById('edit-preset-id').value;
+    const name = document.getElementById('pm-name').value.trim();
+    if (!name) { Toast.warning('Name required'); return; }
+
+    const body = {
+      name,
+      category: document.getElementById('pm-category').value,
+      style: document.getElementById('pm-style').value || null,
+      prompt_prefix: document.getElementById('pm-prefix').value.trim() || null,
+      prompt_suffix: document.getElementById('pm-suffix').value.trim() || null,
+      negative_prompt: document.getElementById('pm-neg').value.trim() || null,
+    };
+
+    try {
+      let resp;
+      if (id) {
+        resp = await fetch(`${API}/style-presets/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+      } else {
+        resp = await fetch(`${API}/style-presets`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+      }
+      if (!resp.ok) throw new Error('Failed');
+      Modal.hide('preset-modal');
+      Toast.success(id ? 'Preset updated' : 'Preset created');
+      loadPresets();
+    } catch (e) {
+      Toast.error('Failed to save');
+    }
+  };
+
+  window.duplicatePreset = async function(id) {
+    try {
+      const resp = await fetch(`${API}/style-presets/${id}/duplicate`, { method: 'POST' });
+      if (!resp.ok) throw new Error('Failed');
+      Toast.success('Preset duplicated');
+      loadPresets();
+    } catch (e) {
+      Toast.error('Failed');
+    }
+  };
+
+  window.confirmDeletePreset = function(id) {
+    deleteTargetId = id;
+    Modal.show('delete-preset-modal');
+  };
+
+  document.getElementById('confirm-delete-preset-btn').addEventListener('click', async () => {
+    if (!deleteTargetId) return;
+    try {
+      const resp = await fetch(`${API}/style-presets/${deleteTargetId}`, { method: 'DELETE' });
+      if (!resp.ok) throw new Error('Failed');
+      Modal.hide('delete-preset-modal');
+      Toast.success('Preset deleted');
+      deleteTargetId = null;
+      loadPresets();
+    } catch (e) {
+      Toast.error('Failed');
+    }
+  });
+
+  // ---- Search & Filter Events ----
+  let searchTimeout;
+  document.getElementById('preset-search').addEventListener('input', () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(loadPresets, 300);
+  });
+  document.getElementById('preset-category-filter').addEventListener('change', loadPresets);
+
+  // ---- Helpers ----
+  function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+  function escapeJs(str) {
+    if (!str) return '';
+    return str.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
+  }
+
+  // ---- Init ----
+  loadCategories();
+})();
+</script>
+{% endblock %}

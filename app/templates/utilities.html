@@ -1,0 +1,1641 @@
+{% extends "base.html" %}
+{% block title %}Utilities — AI Studio{% endblock %}
+
+{% block head_extra %}
+<style>
+  .utilities-layout {
+    max-width: 960px;
+    margin: 0 auto;
+  }
+  .util-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border-default);
+    margin-bottom: var(--space-6);
+  }
+  .util-tab {
+    padding: var(--space-3) var(--space-5);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--text-tertiary);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    margin-bottom: -1px;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .util-tab:hover { color: var(--text-primary); }
+  .util-tab.active {
+    color: var(--brand-600);
+    border-bottom-color: var(--brand-600);
+  }
+  .util-tab.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .util-tab-badge {
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: var(--radius-full);
+    background: var(--gray-200);
+    color: var(--text-tertiary);
+  }
+  .util-tab.active .util-tab-badge {
+    background: var(--brand-100);
+    color: var(--brand-700);
+  }
+  .util-panel { display: none; }
+  .util-panel.active { display: block; }
+  .util-card {
+    background: var(--surface-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-xl);
+    padding: var(--space-8);
+    margin-bottom: var(--space-6);
+  }
+  .util-card-title {
+    font-size: var(--text-xl);
+    font-weight: var(--weight-bold);
+    margin-bottom: var(--space-2);
+  }
+  .util-card-desc {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    margin-bottom: var(--space-6);
+  }
+  .util-upload-zone {
+    border: 2px dashed var(--border-default);
+    border-radius: var(--radius-lg);
+    padding: var(--space-10) var(--space-6);
+    text-align: center;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    margin-bottom: var(--space-4);
+  }
+  .util-upload-zone:hover,
+  .util-upload-zone.dragover {
+    border-color: var(--brand-500);
+    background: var(--brand-50);
+  }
+  [data-theme="dark"] .util-upload-zone:hover,
+  [data-theme="dark"] .util-upload-zone.dragover {
+    background: rgba(76, 110, 245, 0.08);
+  }
+  .util-upload-zone svg {
+    width: 48px;
+    height: 48px;
+    color: var(--text-tertiary);
+    margin: 0 auto var(--space-3);
+  }
+  .util-upload-zone p {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-1);
+  }
+  .util-upload-zone .hint {
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+  }
+  .util-preview {
+    display: flex;
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+    flex-wrap: wrap;
+  }
+  .util-preview-box {
+    flex: 1;
+    min-width: 200px;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-default);
+  }
+  .util-preview-box img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .util-preview-label {
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-default);
+    text-align: center;
+  }
+  .util-dimensions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-4);
+    font-size: var(--text-sm);
+  }
+  .util-dimensions .arrow {
+    color: var(--brand-500);
+    font-weight: bold;
+    font-size: var(--text-lg);
+  }
+  .util-dimensions .dim-value {
+    font-weight: var(--weight-semibold);
+    color: var(--text-primary);
+  }
+  .util-description-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    margin-bottom: var(--space-4);
+  }
+  .util-desc-field {
+    margin-bottom: var(--space-3);
+  }
+  .util-desc-field:last-child { margin-bottom: 0; }
+  .util-desc-label {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: var(--space-1);
+  }
+  .util-desc-value {
+    font-size: var(--text-sm);
+    color: var(--text-primary);
+    line-height: var(--leading-relaxed);
+  }
+  .util-capability-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+  }
+  .util-capability-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-3);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    border-radius: var(--radius-full);
+    border: 1px solid var(--border-default);
+  }
+  .util-capability-chip.supported {
+    background: var(--success-50);
+    color: var(--success-700);
+    border-color: var(--success-100);
+  }
+  .util-capability-chip.unsupported {
+    background: var(--gray-100);
+    color: var(--text-tertiary);
+    border-color: var(--gray-200);
+  }
+  [data-theme="dark"] .util-capability-chip.supported {
+    background: rgba(64, 192, 87, 0.12);
+    color: var(--success-500);
+    border-color: rgba(64, 192, 87, 0.2);
+  }
+  [data-theme="dark"] .util-capability-chip.unsupported {
+    background: var(--gray-800);
+    color: var(--text-tertiary);
+    border-color: var(--gray-700);
+  }
+  .util-capability-chip .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+  .util-capability-chip.supported .dot { background: var(--success-500); }
+  .util-capability-chip.unsupported .dot { background: var(--gray-400); }
+  .util-scale-selector {
+    display: flex;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+  }
+  .util-scale-btn {
+    flex: 1;
+    padding: var(--space-3);
+    text-align: center;
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-default);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+  }
+  .util-scale-btn:hover {
+    border-color: var(--border-strong);
+  }
+  .util-scale-btn.active {
+    border-color: var(--brand-500);
+    background: var(--brand-50);
+    color: var(--brand-700);
+  }
+  [data-theme="dark"] .util-scale-btn.active {
+    background: rgba(76, 110, 245, 0.12);
+    color: var(--brand-400);
+  }
+  .util-scale-btn .scale-value {
+    font-size: var(--text-lg);
+    font-weight: var(--weight-bold);
+    display: block;
+  }
+  .util-scale-btn .scale-label {
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+  }
+  .util-unavailable {
+    text-align: center;
+    padding: var(--space-8);
+    color: var(--text-tertiary);
+  }
+  .util-unavailable svg {
+    width: 48px;
+    height: 48px;
+    margin-bottom: var(--space-3);
+    opacity: 0.4;
+  }
+  .util-result-actions {
+    display: flex;
+    gap: var(--space-2);
+    margin-top: var(--space-4);
+  }
+  .util-disclaimer {
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+    font-style: italic;
+    padding: var(--space-3);
+    background: var(--warning-50);
+    border: 1px solid var(--warning-100);
+    border-radius: var(--radius-md);
+    margin-top: var(--space-4);
+  }
+  [data-theme="dark"] .util-disclaimer {
+    background: rgba(252, 196, 25, 0.08);
+    border-color: rgba(252, 196, 25, 0.15);
+  }
+
+  /* ===== PROGRESS BAR ===== */
+  .util-progress-wrapper {
+    margin-bottom: var(--space-4);
+  }
+  .util-progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-2);
+  }
+  .util-progress-text {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--text-primary);
+  }
+  .util-progress-pct {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    color: var(--brand-600);
+  }
+  .util-progress-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--gray-100);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+  }
+  [data-theme="dark"] .util-progress-bar {
+    background: var(--gray-800);
+  }
+  .util-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--brand-500), var(--brand-400));
+    border-radius: var(--radius-full);
+    transition: width 0.3s ease;
+    position: relative;
+  }
+  .util-progress-fill.complete {
+    background: var(--success-500);
+  }
+  .util-progress-fill.error {
+    background: var(--danger-500);
+  }
+  .util-progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    animation: shimmer 1.5s infinite;
+  }
+  .util-progress-fill.complete::after,
+  .util-progress-fill.error::after {
+    animation: none;
+  }
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+  .util-progress-steps {
+    display: flex;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+  }
+  .util-progress-step {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+  }
+  .util-progress-step.active {
+    color: var(--brand-600);
+    font-weight: var(--weight-medium);
+  }
+  .util-progress-step.done {
+    color: var(--success-600);
+  }
+  .util-progress-step.error {
+    color: var(--danger-600);
+  }
+  .util-progress-step .step-icon {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: bold;
+  }
+  .util-progress-step.active .step-icon {
+    background: var(--brand-100);
+    color: var(--brand-600);
+    animation: pulse-dot 1.5s infinite;
+  }
+  .util-progress-step.done .step-icon {
+    background: var(--success-100);
+    color: var(--success-600);
+  }
+  .util-progress-step.error .step-icon {
+    background: var(--danger-100);
+    color: var(--danger-600);
+  }
+  @keyframes pulse-dot {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+  }
+
+  /* ===== BATCH QUEUE ===== */
+  .util-batch-queue {
+    margin-top: var(--space-4);
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+  }
+  .util-batch-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--border-default);
+    font-size: var(--text-sm);
+  }
+  .util-batch-item:last-child {
+    border-bottom: none;
+  }
+  .util-batch-item-thumb {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    object-fit: cover;
+    background: var(--bg-tertiary);
+    flex-shrink: 0;
+  }
+  .util-batch-item-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .util-batch-item-name {
+    font-weight: var(--weight-medium);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .util-batch-item-dims {
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+  }
+  .util-batch-item-status {
+    flex-shrink: 0;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+  }
+  .util-batch-item-status.pending {
+    background: var(--gray-100);
+    color: var(--text-tertiary);
+  }
+  .util-batch-item-status.processing {
+    background: var(--brand-100);
+    color: var(--brand-700);
+    animation: pulse-dot 1.5s infinite;
+  }
+  .util-batch-item-status.completed {
+    background: var(--success-100);
+    color: var(--success-700);
+  }
+  .util-batch-item-status.failed {
+    background: var(--danger-100);
+    color: var(--danger-700);
+  }
+  .util-batch-item-remove {
+    background: none;
+    border: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    padding: var(--space-1);
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+    transition: all var(--transition-fast);
+  }
+  .util-batch-item-remove:hover {
+    color: var(--danger-500);
+    background: var(--danger-50);
+  }
+  .util-batch-count {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-3);
+    font-size: var(--text-sm);
+  }
+  .util-batch-count .count {
+    font-weight: var(--weight-bold);
+    color: var(--brand-600);
+  }
+
+  /* ===== HISTORY PANEL ===== */
+  .util-history-panel {
+    background: var(--surface-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-xl);
+    margin-top: var(--space-6);
+  }
+  .util-history-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-4) var(--space-6);
+    border-bottom: 1px solid var(--border-default);
+    cursor: pointer;
+    user-select: none;
+  }
+  .util-history-header:hover {
+    background: var(--bg-secondary);
+  }
+  .util-history-title {
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .util-history-count {
+    font-size: var(--text-xs);
+    background: var(--gray-100);
+    color: var(--text-tertiary);
+    padding: 1px 8px;
+    border-radius: var(--radius-full);
+  }
+  .util-history-chevron {
+    transition: transform var(--transition-fast);
+    color: var(--text-tertiary);
+  }
+  .util-history-chevron.open {
+    transform: rotate(180deg);
+  }
+  .util-history-body {
+    display: none;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  .util-history-body.open {
+    display: block;
+  }
+  .util-history-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-6);
+    border-bottom: 1px solid var(--border-default);
+    font-size: var(--text-sm);
+    transition: background var(--transition-fast);
+  }
+  .util-history-item:last-child {
+    border-bottom: none;
+  }
+  .util-history-item:hover {
+    background: var(--bg-secondary);
+  }
+  .util-history-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--text-sm);
+    flex-shrink: 0;
+  }
+  .util-history-icon.upscale {
+    background: var(--brand-100);
+    color: var(--brand-600);
+  }
+  .util-history-icon.describe {
+    background: rgba(156, 39, 176, 0.1);
+    color: #9c27b0;
+  }
+  .util-history-icon.bg_remove {
+    background: var(--success-100);
+    color: var(--success-600);
+  }
+  .util-history-icon.batch_upscale,
+  .util-history-icon.batch_describe {
+    background: rgba(255, 152, 0, 0.1);
+    color: #f57c00;
+  }
+  .util-history-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .util-history-op {
+    font-weight: var(--weight-medium);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .util-history-meta {
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+    display: flex;
+    gap: var(--space-2);
+    margin-top: 2px;
+  }
+  .util-history-status {
+    flex-shrink: 0;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+  }
+  .util-history-status.completed {
+    background: var(--success-100);
+    color: var(--success-700);
+  }
+  .util-history-status.failed {
+    background: var(--danger-100);
+    color: var(--danger-700);
+  }
+  .util-history-status.processing {
+    background: var(--brand-100);
+    color: var(--brand-700);
+  }
+  .util-history-empty {
+    padding: var(--space-8);
+    text-align: center;
+    color: var(--text-tertiary);
+    font-size: var(--text-sm);
+  }
+  .util-history-load-more {
+    display: block;
+    width: 100%;
+    padding: var(--space-3);
+    text-align: center;
+    background: none;
+    border: none;
+    border-top: 1px solid var(--border-default);
+    color: var(--brand-600);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition: background var(--transition-fast);
+  }
+  .util-history-load-more:hover {
+    background: var(--bg-secondary);
+  }
+</style>
+{% endblock %}
+
+{% block header_left %}
+<h4 style="font-size:var(--text-base);font-weight:var(--weight-semibold);">Utilities</h4>
+{% endblock %}
+
+{% block content %}
+<div class="utilities-layout">
+  <!-- Provider Capabilities -->
+  <div class="util-card" style="padding:var(--space-4) var(--space-6);">
+    <div class="flex items-center justify-between" style="margin-bottom:var(--space-3);">
+      <span class="text-sm font-medium">Provider Capabilities</span>
+      <select id="provider-select" class="gallery-filter-select" onchange="loadCapabilities()" style="min-width:160px;"></select>
+    </div>
+    <div class="util-capability-list" id="capability-chips"></div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="util-tabs">
+    <button class="util-tab active" data-tab="upscale" onclick="switchTab('upscale')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+      Upscale
+    </button>
+    <button class="util-tab" data-tab="bgremove" onclick="switchTab('bgremove')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      Background Removal
+    </button>
+    <button class="util-tab" data-tab="describe" onclick="switchTab('describe')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Image to Prompt
+    </button>
+  </div>
+
+  <!-- ===== UPSCALE PANEL ===== -->
+  <div class="util-panel active" id="panel-upscale">
+    <div class="util-card">
+      <div class="util-card-title">Upscale Image</div>
+      <div class="util-card-desc">Increase image resolution while preserving quality. Original is always preserved. Supports batch processing — drop multiple files.</div>
+
+      <div id="upscale-upload-zone" class="util-upload-zone" onclick="document.getElementById('upscale-file-input').click()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <p>Drop images here or click to upload</p>
+        <div class="hint">PNG, JPEG, WebP • Max 10MB • Multiple files supported</div>
+      </div>
+      <input type="file" id="upscale-file-input" accept="image/png,image/jpeg,image/webp" multiple style="display:none;">
+
+      <!-- Batch Queue -->
+      <div id="upscale-batch-queue" style="display:none;">
+        <div class="util-batch-count">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          <span><span class="count" id="upscale-batch-count-num">0</span> images queued</span>
+          <button class="btn btn-ghost btn-sm" onclick="clearBatchQueue('upscale')" style="margin-left:auto;font-size:var(--text-xs);">Clear All</button>
+        </div>
+        <div class="util-batch-queue" id="upscale-batch-items"></div>
+      </div>
+
+      <!-- Progress Bar -->
+      <div id="upscale-progress" style="display:none;" class="util-progress-wrapper">
+        <div class="util-progress-header">
+          <span class="util-progress-text" id="upscale-progress-text">Processing...</span>
+          <span class="util-progress-pct" id="upscale-progress-pct">0%</span>
+        </div>
+        <div class="util-progress-bar">
+          <div class="util-progress-fill" id="upscale-progress-fill" style="width:0%"></div>
+        </div>
+        <div class="util-progress-steps" id="upscale-progress-steps"></div>
+      </div>
+
+      <!-- Single Image Preview -->
+      <div id="upscale-preview" style="display:none;">
+        <div class="util-preview">
+          <div class="util-preview-box">
+            <img id="upscale-original-img" src="" alt="Original">
+            <div class="util-preview-label" id="upscale-original-label">Original</div>
+          </div>
+          <div class="util-preview-box" id="upscale-result-box" style="display:none;">
+            <img id="upscale-result-img" src="" alt="Upscaled">
+            <div class="util-preview-label" id="upscale-result-label">Upscaled</div>
+          </div>
+        </div>
+
+        <div class="util-scale-selector" id="scale-selector">
+          <button class="util-scale-btn active" data-scale="2" onclick="selectScale(2)">
+            <span class="scale-value">2x</span>
+            <span class="scale-label">Double</span>
+          </button>
+          <button class="util-scale-btn" data-scale="3" onclick="selectScale(3)">
+            <span class="scale-value">3x</span>
+            <span class="scale-label">Triple</span>
+          </button>
+          <button class="util-scale-btn" data-scale="4" onclick="selectScale(4)">
+            <span class="scale-value">4x</span>
+            <span class="scale-label">Quad</span>
+          </button>
+        </div>
+
+        <div class="util-dimensions" id="upscale-dims" style="display:none;">
+          <span class="dim-value" id="upscale-dim-original">--</span>
+          <span class="arrow">&rarr;</span>
+          <span class="dim-value" id="upscale-dim-result">--</span>
+        </div>
+
+        <div class="util-result-actions" id="upscale-actions" style="display:none;">
+          <button class="btn btn-primary" onclick="executeUpscale()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            Upscale
+          </button>
+          <button class="btn btn-secondary" onclick="downloadUpscaleResult()" id="upscale-download-btn" style="display:none;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download
+          </button>
+          <button class="btn btn-ghost" onclick="openInEditor()" id="upscale-editor-btn" style="display:none;">
+            Open in Editor
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== BACKGROUND REMOVAL PANEL ===== -->
+  <div class="util-panel" id="panel-bgremove">
+    <div class="util-card">
+      <div class="util-card-title">Remove Background</div>
+      <div class="util-card-desc">Generate a real transparent output. Only available when the provider supports actual alpha-channel generation.</div>
+
+      <div id="bgremove-upload-zone" class="util-upload-zone" onclick="document.getElementById('bgremove-file-input').click()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <p>Drop an image here or click to upload</p>
+        <div class="hint">PNG, JPEG, WebP • Max 10MB</div>
+      </div>
+      <input type="file" id="bgremove-file-input" accept="image/png,image/jpeg,image/webp" style="display:none;">
+
+      <div id="bgremove-preview" style="display:none;">
+        <div class="util-preview">
+          <div class="util-preview-box">
+            <img id="bgremove-original-img" src="" alt="Original">
+            <div class="util-preview-label">Original</div>
+          </div>
+        </div>
+
+        <div class="util-result-actions" id="bgremove-actions">
+          <button class="btn btn-primary" onclick="executeBgRemove()" id="bgremove-execute-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            Remove Background
+          </button>
+        </div>
+      </div>
+
+      <div class="util-unavailable" id="bgremove-unavailable" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+        <p class="text-sm">Background removal requires a provider with <code>background_removal</code> capability.</p>
+        <p class="text-xs text-muted" style="margin-top:var(--space-2);">The stub provider cannot perform actual background removal because it cannot generate real alpha channels.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== IMAGE-TO-PROMPT PANEL ===== -->
+  <div class="util-panel" id="panel-describe">
+    <div class="util-card">
+      <div class="util-card-title">Image to Prompt</div>
+      <div class="util-card-desc">Generate a structured description of an image. Supports batch analysis of multiple images.</div>
+
+      <div id="describe-upload-zone" class="util-upload-zone" onclick="document.getElementById('describe-file-input').click()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <p>Drop images here or click to upload</p>
+        <div class="hint">PNG, JPEG, WebP • Max 10MB • Multiple files supported</div>
+      </div>
+      <input type="file" id="describe-file-input" accept="image/png,image/jpeg,image/webp" multiple style="display:none;">
+
+      <!-- Batch Queue for Describe -->
+      <div id="describe-batch-queue" style="display:none;">
+        <div class="util-batch-count">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          <span><span class="count" id="describe-batch-count-num">0</span> images queued</span>
+          <button class="btn btn-ghost btn-sm" onclick="clearBatchQueue('describe')" style="margin-left:auto;font-size:var(--text-xs);">Clear All</button>
+        </div>
+        <div class="util-batch-queue" id="describe-batch-items"></div>
+        <div class="util-result-actions" style="margin-top:var(--space-3);">
+          <button class="btn btn-primary" onclick="executeBatchDescribe()" id="describe-batch-execute-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Analyze All
+          </button>
+        </div>
+      </div>
+
+      <!-- Progress for Describe Batch -->
+      <div id="describe-progress" style="display:none;" class="util-progress-wrapper">
+        <div class="util-progress-header">
+          <span class="util-progress-text" id="describe-progress-text">Analyzing...</span>
+          <span class="util-progress-pct" id="describe-progress-pct">0%</span>
+        </div>
+        <div class="util-progress-bar">
+          <div class="util-progress-fill" id="describe-progress-fill" style="width:0%"></div>
+        </div>
+        <div class="util-progress-steps" id="describe-progress-steps"></div>
+      </div>
+
+      <!-- Single Image Preview for Describe -->
+      <div id="describe-preview" style="display:none;">
+        <div class="util-preview">
+          <div class="util-preview-box" style="max-width:400px;">
+            <img id="describe-original-img" src="" alt="Original">
+            <div class="util-preview-label">Uploaded Image</div>
+          </div>
+        </div>
+
+        <div class="util-result-actions" id="describe-actions">
+          <button class="btn btn-primary" onclick="executeDescribe()" id="describe-execute-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Analyze Image
+          </button>
+        </div>
+      </div>
+
+      <!-- Batch Results for Describe -->
+      <div id="describe-batch-results" style="display:none;"></div>
+
+      <div id="describe-result" style="display:none;">
+        <div class="util-description-card">
+          <div class="util-desc-field">
+            <div class="util-desc-label">Subject</div>
+            <div class="util-desc-value" id="desc-subject">--</div>
+          </div>
+          <div class="util-desc-field">
+            <div class="util-desc-label">Environment</div>
+            <div class="util-desc-value" id="desc-environment">--</div>
+          </div>
+          <div class="util-desc-field">
+            <div class="util-desc-label">Style</div>
+            <div class="util-desc-value" id="desc-style">--</div>
+          </div>
+          <div class="util-desc-field">
+            <div class="util-desc-label">Composition</div>
+            <div class="util-desc-value" id="desc-composition">--</div>
+          </div>
+          <div class="util-desc-field">
+            <div class="util-desc-label">Lighting</div>
+            <div class="util-desc-value" id="desc-lighting">--</div>
+          </div>
+          <div class="util-desc-field">
+            <div class="util-desc-label">Colors</div>
+            <div class="util-desc-value" id="desc-colors">--</div>
+          </div>
+          <div class="util-desc-field">
+            <div class="util-desc-label">Mood</div>
+            <div class="util-desc-value" id="desc-mood">--</div>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:var(--space-3);">
+          <label class="form-label">Generated Prompt</label>
+          <textarea id="desc-prompt-text" class="textarea" style="min-height:80px;" readonly></textarea>
+        </div>
+
+        <div class="util-result-actions">
+          <button class="btn btn-primary" onclick="useAsPrompt()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            Use as Prompt
+          </button>
+          <button class="btn btn-secondary" onclick="copyPrompt()">Copy Prompt</button>
+        </div>
+
+        <div class="util-disclaimer">
+          <strong>Note:</strong> This description is AI-generated and may not perfectly match the original image. Use it as a starting point for creative exploration.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== HISTORY PANEL ===== -->
+  <div class="util-history-panel" id="history-panel">
+    <div class="util-history-header" onclick="toggleHistory()">
+      <div class="util-history-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Operation History
+        <span class="util-history-count" id="history-count">0</span>
+      </div>
+      <svg class="util-history-chevron" id="history-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="util-history-body" id="history-body">
+      <div class="util-history-empty" id="history-empty">No operations yet. Upload and process an image to see history.</div>
+      <div id="history-items"></div>
+      <button class="util-history-load-more" id="history-load-more" style="display:none;" onclick="loadMoreHistory()">Load More</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  'use strict';
+
+  // ---- State ----
+  let provider = 'stub';
+  let capabilities = {};
+  let currentTab = 'upscale';
+
+  // Upload state per tab (single-image mode)
+  const uploads = {
+    upscale: { imageId: null, file: null, url: null },
+    bgremove: { imageId: null, file: null, url: null },
+    describe: { imageId: null, file: null, url: null },
+  };
+
+  let selectedScale = 2;
+  let upscaleResultUrl = null;
+  let upscaleResultVersionId = null;
+
+  // Batch queues
+  const batchQueues = {
+    upscale: [],   // [{imageId, url, filename, width, height, status}]
+    describe: [],
+  };
+
+  // History
+  let historyOffset = 0;
+  const historyLimit = 20;
+
+  // ---- Init ----
+  document.addEventListener('DOMContentLoaded', () => {
+    loadProviders();
+    setupDragDrop();
+    loadHistory();
+  });
+
+  // ---- Providers ----
+  async function loadProviders() {
+    try {
+      const resp = await fetch('/api/v1/providers');
+      const data = await resp.json();
+      const select = document.getElementById('provider-select');
+      select.innerHTML = '';
+      (data.providers || []).forEach(p => {
+        select.innerHTML += `<option value="${p.name}">${p.display_name}</option>`;
+      });
+      provider = select.value || 'stub';
+      loadCapabilities();
+    } catch (e) { /* silent */ }
+  }
+
+  async function loadCapabilities() {
+    provider = document.getElementById('provider-select').value || 'stub';
+    try {
+      const resp = await fetch('/api/v1/utilities/capabilities');
+      const data = await resp.json();
+      capabilities = data.capabilities || {};
+      renderCapabilities();
+      updateTabAvailability();
+    } catch (e) { /* silent */ }
+  }
+
+  function renderCapabilities() {
+    const caps = capabilities[provider] || {};
+    const container = document.getElementById('capability-chips');
+    const features = [
+      { key: 'upscale', label: 'Upscale' },
+      { key: 'background_removal', label: 'Background Removal' },
+      { key: 'image_understanding', label: 'Image Analysis' },
+      { key: 'transparency', label: 'Alpha Channel' },
+      { key: 'multi_reference', label: 'Multi-Reference' },
+    ];
+
+    container.innerHTML = features.map(f => {
+      const supported = caps[f.key] || false;
+      return `<span class="util-capability-chip ${supported ? 'supported' : 'unsupported'}">
+        <span class="dot"></span>
+        ${f.label} ${supported ? '\u2713' : '\u2717'}
+      </span>`;
+    }).join('');
+  }
+
+  function updateTabAvailability() {
+    const caps = capabilities[provider] || {};
+
+    // BG removal tab
+    const bgTab = document.querySelector('[data-tab="bgremove"]');
+    const bgUnavailable = document.getElementById('bgremove-unavailable');
+    const bgActions = document.getElementById('bgremove-actions');
+    if (!caps.background_removal) {
+      bgTab?.classList.add('disabled');
+      if (bgUnavailable) bgUnavailable.style.display = 'block';
+      if (bgActions) bgActions.style.display = 'none';
+    } else {
+      bgTab?.classList.remove('disabled');
+      if (bgUnavailable) bgUnavailable.style.display = 'none';
+      if (bgActions) bgActions.style.display = 'flex';
+    }
+
+    // Describe tab
+    const descTab = document.querySelector('[data-tab="describe"]');
+    if (!caps.image_understanding) {
+      descTab?.classList.add('disabled');
+    } else {
+      descTab?.classList.remove('disabled');
+    }
+  }
+
+  // ---- Tab Switching ----
+  window.switchTab = function(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.util-tab').forEach(t => {
+      t.classList.toggle('active', t.dataset.tab === tab);
+    });
+    document.querySelectorAll('.util-panel').forEach(p => {
+      p.classList.toggle('active', p.id === `panel-${tab}`);
+    });
+  };
+
+  // ---- Drag & Drop ----
+  function setupDragDrop() {
+    ['upscale', 'bgremove', 'describe'].forEach(tab => {
+      const zone = document.getElementById(`${tab}-upload-zone`);
+      if (!zone) return;
+
+      zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('dragover'); });
+      zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+      zone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        zone.classList.remove('dragover');
+        const files = Array.from(e.dataTransfer.files);
+        if (files.length > 0) handleFilesUpload(tab, files);
+      });
+
+      const input = document.getElementById(`${tab}-file-input`);
+      if (input) {
+        input.addEventListener('change', () => {
+          if (input.files.length > 0) handleFilesUpload(tab, Array.from(input.files));
+          input.value = '';  // Reset so same files can be re-selected
+        });
+      }
+    });
+  }
+
+  // ---- File Upload (multi-file aware) ----
+  async function handleFilesUpload(tab, files) {
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/webp'];
+    const validFiles = files.filter(f => {
+      if (!allowedTypes.includes(f.type)) {
+        Toast.error(`${f.name}: Invalid type. Use PNG, JPEG, or WebP.`);
+        return false;
+      }
+      if (f.size > 10 * 1024 * 1024) {
+        Toast.error(`${f.name}: Too large. Max 10MB.`);
+        return false;
+      }
+      return true;
+    });
+
+    if (validFiles.length === 0) return;
+
+    // Single file for bgremove and describe-single mode
+    if (tab === 'bgremove' || (tab === 'describe' && validFiles.length === 1)) {
+      return handleUpload(tab, validFiles[0]);
+    }
+
+    // Multiple files -> batch mode for upscale and describe
+    if (validFiles.length >= 1 && (tab === 'upscale' || tab === 'describe')) {
+      for (const file of validFiles) {
+        await addToBatchQueue(tab, file);
+      }
+    }
+  }
+
+  async function handleUpload(tab, file) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const resp = await fetch('/api/v1/utilities/upload', { method: 'POST', body: formData });
+      if (!resp.ok) {
+        const err = await resp.json();
+        throw new Error(err.error || 'Upload failed');
+      }
+      const data = await resp.json();
+
+      uploads[tab].imageId = data.image.id;
+      uploads[tab].url = data.image.url;
+
+      // Show preview
+      const preview = document.getElementById(`${tab}-preview`);
+      const img = document.getElementById(`${tab}-original-img`);
+      if (preview) preview.style.display = 'block';
+      if (img) img.src = data.image.url;
+
+      // Show dimensions for upscale
+      if (tab === 'upscale' && data.image.width && data.image.height) {
+        document.getElementById('upscale-dim-original').textContent = `${data.image.width} \u00d7 ${data.image.height}px`;
+        updateUpscalePreview(data.image.width, data.image.height);
+      }
+
+      Toast.success('Image uploaded!');
+    } catch (err) {
+      Toast.error(err.message || 'Upload failed');
+    }
+  }
+
+  // ---- Batch Queue Management ----
+  async function addToBatchQueue(tab, file) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const resp = await fetch('/api/v1/utilities/upload', { method: 'POST', body: formData });
+      if (!resp.ok) {
+        const err = await resp.json();
+        throw new Error(err.error || 'Upload failed');
+      }
+      const data = await resp.json();
+
+      batchQueues[tab].push({
+        imageId: data.image.id,
+        url: data.image.url,
+        filename: file.name,
+        width: data.image.width,
+        height: data.image.height,
+        status: 'pending',
+      });
+
+      renderBatchQueue(tab);
+    } catch (err) {
+      Toast.error(`${file.name}: ${err.message || 'Upload failed'}`);
+    }
+  }
+
+  function renderBatchQueue(tab) {
+    const queue = batchQueues[tab];
+    const queueEl = document.getElementById(`${tab}-batch-queue`);
+    const countEl = document.getElementById(`${tab}-batch-count-num`);
+    const itemsEl = document.getElementById(`${tab}-batch-items`);
+
+    if (queue.length === 0) {
+      if (queueEl) queueEl.style.display = 'none';
+      return;
+    }
+
+    if (queueEl) queueEl.style.display = 'block';
+    if (countEl) countEl.textContent = queue.length;
+    if (itemsEl) {
+      itemsEl.innerHTML = queue.map((item, idx) => `
+        <div class="util-batch-item">
+          <img class="util-batch-item-thumb" src="${item.url}" alt="${item.filename}" onerror="this.style.display='none'">
+          <div class="util-batch-item-info">
+            <div class="util-batch-item-name">${item.filename}</div>
+            <div class="util-batch-item-dims">${item.width || '?'} x ${item.height || '?'}px</div>
+          </div>
+          <span class="util-batch-item-status ${item.status}">${item.status}</span>
+          ${item.status === 'pending' ? `<button class="util-batch-item-remove" onclick="removeFromBatch('${tab}', ${idx})" title="Remove">&times;</button>` : ''}
+        </div>
+      `).join('');
+    }
+  }
+
+  window.removeFromBatch = function(tab, idx) {
+    batchQueues[tab].splice(idx, 1);
+    renderBatchQueue(tab);
+  };
+
+  window.clearBatchQueue = function(tab) {
+    batchQueues[tab] = [];
+    renderBatchQueue(tab);
+  };
+
+  // ---- Progress Helpers ----
+  function showProgress(tab, text, pct) {
+    const el = document.getElementById(`${tab}-progress`);
+    const textEl = document.getElementById(`${tab}-progress-text`);
+    const pctEl = document.getElementById(`${tab}-progress-pct`);
+    const fillEl = document.getElementById(`${tab}-progress-fill`);
+    if (el) el.style.display = 'block';
+    if (textEl) textEl.textContent = text;
+    if (pctEl) pctEl.textContent = `${Math.round(pct)}%`;
+    if (fillEl) {
+      fillEl.style.width = `${pct}%`;
+      fillEl.className = 'util-progress-fill';
+    }
+  }
+
+  function updateProgress(tab, text, pct, state) {
+    const textEl = document.getElementById(`${tab}-progress-text`);
+    const pctEl = document.getElementById(`${tab}-progress-pct`);
+    const fillEl = document.getElementById(`${tab}-progress-fill`);
+    if (textEl) textEl.textContent = text;
+    if (pctEl) pctEl.textContent = `${Math.round(pct)}%`;
+    if (fillEl) {
+      fillEl.style.width = `${pct}%`;
+      if (state === 'complete') fillEl.classList.add('complete');
+      else if (state === 'error') fillEl.classList.add('error');
+    }
+  }
+
+  function renderProgressSteps(tab, total, completed, failed) {
+    const el = document.getElementById(`${tab}-progress-steps`);
+    if (!el) return;
+    const items = [];
+    for (let i = 0; i < total; i++) {
+      let cls = '';
+      let icon = `${i + 1}`;
+      if (i < completed) { cls = 'done'; icon = '\u2713'; }
+      else if (i < completed + failed) { cls = 'error'; icon = '\u2717'; }
+      else if (i === completed + failed) { cls = 'active'; }
+      items.push(`<div class="util-progress-step ${cls}"><span class="step-icon">${icon}</span></div>`);
+    }
+    el.innerHTML = items.join('');
+  }
+
+  function hideProgress(tab) {
+    const el = document.getElementById(`${tab}-progress`);
+    if (el) el.style.display = 'none';
+  }
+
+  // ---- Upscale ----
+  window.selectScale = function(scale) {
+    selectedScale = scale;
+    document.querySelectorAll('.util-scale-btn').forEach(b => {
+      b.classList.toggle('active', parseInt(b.dataset.scale) === scale);
+    });
+    const img = document.getElementById('upscale-original-img');
+    if (img && img.naturalWidth) {
+      updateUpscalePreview(img.naturalWidth, img.naturalHeight);
+    }
+  };
+
+  function updateUpscalePreview(origW, origH) {
+    const newW = Math.round(origW * selectedScale);
+    const newH = Math.round(origH * selectedScale);
+    document.getElementById('upscale-dim-result').textContent = `${newW} \u00d7 ${newH}px`;
+    document.getElementById('upscale-dims').style.display = 'flex';
+    document.getElementById('upscale-actions').style.display = 'flex';
+  }
+
+  window.executeUpscale = async function() {
+    // Batch mode
+    if (batchQueues.upscale.length > 0) {
+      return executeBatchUpscale();
+    }
+
+    // Single mode
+    if (!uploads.upscale.imageId) { Toast.warning('Upload an image first'); return; }
+    if (!capabilities[provider]?.upscale) {
+      Toast.error(`Provider "${provider}" does not support upscaling.`);
+      return;
+    }
+
+    const btn = document.getElementById('upscale-actions')?.querySelector('.btn-primary');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner spinner-sm"></span> Processing...'; }
+
+    try {
+      showProgress('upscale', 'Upscaling...', 20);
+
+      const resp = await fetch('/api/v1/utilities/upscale', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image_id: uploads.upscale.imageId,
+          scale: selectedScale,
+          provider: provider,
+        }),
+      });
+
+      updateProgress('upscale', 'Processing result...', 70);
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Upscale failed');
+
+      upscaleResultUrl = data.version.url;
+      upscaleResultVersionId = data.version.id;
+      document.getElementById('upscale-result-img').src = data.version.url;
+      document.getElementById('upscale-result-box').style.display = 'block';
+      document.getElementById('upscale-result-label').textContent = `Upscaled ${data.scale}x`;
+      document.getElementById('upscale-dim-original').textContent = `${data.original_width} \u00d7 ${data.original_height}px`;
+      document.getElementById('upscale-dim-result').textContent = `${data.upscaled_width} \u00d7 ${data.upscaled_height}px`;
+      document.getElementById('upscale-download-btn').style.display = 'inline-flex';
+      document.getElementById('upscale-editor-btn').style.display = 'inline-flex';
+
+      updateProgress('upscale', 'Complete!', 100, 'complete');
+      setTimeout(() => hideProgress('upscale'), 2000);
+
+      Toast.success(`Upscaled to ${data.upscaled_width}x${data.upscaled_height}`);
+      loadHistory();
+    } catch (err) {
+      updateProgress('upscale', `Failed: ${err.message}`, 100, 'error');
+      Toast.error(err.message || 'Upscale failed');
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Upscale'; }
+    }
+  };
+
+  async function executeBatchUpscale() {
+    const queue = batchQueues.upscale;
+    if (queue.length === 0) return;
+
+    if (!capabilities[provider]?.upscale) {
+      Toast.error(`Provider "${provider}" does not support upscaling.`);
+      return;
+    }
+
+    const total = queue.length;
+    showProgress('upscale', `Processing 0/${total}...`, 0);
+    renderProgressSteps('upscale', total, 0, 0);
+
+    const imageIds = queue.map(q => q.imageId);
+
+    try {
+      const resp = await fetch('/api/v1/utilities/batch/upscale', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_ids: imageIds, scale: selectedScale, provider }),
+      });
+
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Batch upscale failed');
+
+      let completed = 0;
+      let failed = 0;
+
+      for (const result of data.results) {
+        const idx = queue.findIndex(q => q.imageId === result.image_id);
+        if (idx >= 0) {
+          if (result.status === 'success') {
+            queue[idx].status = 'completed';
+            completed++;
+          } else {
+            queue[idx].status = 'failed';
+            failed++;
+          }
+        }
+        renderProgressSteps('upscale', total, completed, failed);
+        updateProgress('upscale', `${completed + failed}/${total} processed`, ((completed + failed) / total) * 100);
+        renderBatchQueue('upscale');
+      }
+
+      updateProgress('upscale', `Done: ${completed} succeeded, ${failed} failed`, 100, failed > 0 ? 'error' : 'complete');
+      setTimeout(() => hideProgress('upscale'), 3000);
+
+      Toast.success(`Batch complete: ${completed}/${total} succeeded`);
+      loadHistory();
+    } catch (err) {
+      updateProgress('upscale', `Failed: ${err.message}`, 100, 'error');
+      Toast.error(err.message || 'Batch upscale failed');
+    }
+  }
+
+  window.downloadUpscaleResult = function() {
+    if (upscaleResultUrl) window.location.href = upscaleResultUrl;
+  };
+
+  window.openInEditor = function() {
+    if (upscaleResultUrl) {
+      const match = upscaleResultUrl.match(/\/images\/(\d+)\//);
+      if (match) window.location.href = `/editor?id=${match[1]}`;
+    }
+  };
+
+  // ---- Background Removal ----
+  window.executeBgRemove = async function() {
+    if (!uploads.bgremove.imageId) { Toast.warning('Upload an image first'); return; }
+
+    const caps = capabilities[provider] || {};
+    if (!caps.background_removal) {
+      Toast.error(`Provider "${provider}" does not support background removal.`);
+      return;
+    }
+
+    const btn = document.getElementById('bgremove-execute-btn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner spinner-sm"></span> Processing...'; }
+
+    try {
+      const resp = await fetch('/api/v1/utilities/remove-background', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image_id: uploads.bgremove.imageId,
+          provider: provider,
+        }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Background removal failed');
+      Toast.success('Background removed!');
+      loadHistory();
+    } catch (err) {
+      Toast.error(err.message || 'Background removal failed');
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> Remove Background'; }
+    }
+  };
+
+  // ---- Describe / Image-to-Prompt ----
+  window.executeDescribe = async function() {
+    if (!uploads.describe.imageId) { Toast.warning('Upload an image first'); return; }
+    if (!capabilities[provider]?.image_understanding) {
+      Toast.error(`Provider "${provider}" does not support image understanding.`);
+      return;
+    }
+
+    const btn = document.getElementById('describe-execute-btn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner spinner-sm"></span> Analyzing...'; }
+
+    try {
+      showProgress('describe', 'Analyzing image...', 30);
+      const resp = await fetch('/api/v1/utilities/describe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image_id: uploads.describe.imageId,
+          provider: provider,
+        }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Description failed');
+
+      const desc = data.description;
+      document.getElementById('desc-subject').textContent = desc.subject || '--';
+      document.getElementById('desc-environment').textContent = desc.environment || '--';
+      document.getElementById('desc-style').textContent = desc.style || '--';
+      document.getElementById('desc-composition').textContent = desc.composition || '--';
+      document.getElementById('desc-lighting').textContent = desc.lighting || '--';
+      document.getElementById('desc-colors').textContent = desc.colors || '--';
+      document.getElementById('desc-mood').textContent = desc.mood || '--';
+      document.getElementById('desc-prompt-text').value = desc.prompt || '';
+
+      document.getElementById('describe-result').style.display = 'block';
+      updateProgress('describe', 'Analysis complete!', 100, 'complete');
+      setTimeout(() => hideProgress('describe'), 2000);
+      Toast.success('Image analyzed!');
+      loadHistory();
+    } catch (err) {
+      updateProgress('describe', `Failed: ${err.message}`, 100, 'error');
+      Toast.error(err.message || 'Analysis failed');
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Analyze Image'; }
+    }
+  };
+
+  window.executeBatchDescribe = async function() {
+    const queue = batchQueues.describe;
+    if (queue.length === 0) return;
+
+    if (!capabilities[provider]?.image_understanding) {
+      Toast.error(`Provider "${provider}" does not support image understanding.`);
+      return;
+    }
+
+    const total = queue.length;
+    showProgress('describe', `Analyzing 0/${total}...`, 0);
+    renderProgressSteps('describe', total, 0, 0);
+
+    const imageIds = queue.map(q => q.imageId);
+
+    try {
+      const resp = await fetch('/api/v1/utilities/batch/describe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_ids: imageIds, provider }),
+      });
+
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Batch describe failed');
+
+      let completed = 0;
+      let failed = 0;
+
+      for (const result of data.results) {
+        const idx = queue.findIndex(q => q.imageId === result.image_id);
+        if (idx >= 0) {
+          if (result.status === 'success') {
+            queue[idx].status = 'completed';
+            completed++;
+          } else {
+            queue[idx].status = 'failed';
+            failed++;
+          }
+        }
+        renderProgressSteps('describe', total, completed, failed);
+        updateProgress('describe', `${completed + failed}/${total} analyzed`, ((completed + failed) / total) * 100);
+        renderBatchQueue('describe');
+      }
+
+      updateProgress('describe', `Done: ${completed} succeeded, ${failed} failed`, 100, failed > 0 ? 'error' : 'complete');
+      setTimeout(() => hideProgress('describe'), 3000);
+
+      // Show first successful result
+      const firstSuccess = data.results.find(r => r.status === 'success' && r.description);
+      if (firstSuccess) {
+        const desc = firstSuccess.description;
+        document.getElementById('desc-subject').textContent = desc.subject || '--';
+        document.getElementById('desc-environment').textContent = desc.environment || '--';
+        document.getElementById('desc-style').textContent = desc.style || '--';
+        document.getElementById('desc-composition').textContent = desc.composition || '--';
+        document.getElementById('desc-lighting').textContent = desc.lighting || '--';
+        document.getElementById('desc-colors').textContent = desc.colors || '--';
+        document.getElementById('desc-mood').textContent = desc.mood || '--';
+        document.getElementById('desc-prompt-text').value = desc.prompt || '';
+        document.getElementById('describe-result').style.display = 'block';
+      }
+
+      Toast.success(`Batch complete: ${completed}/${total} analyzed`);
+      loadHistory();
+    } catch (err) {
+      updateProgress('describe', `Failed: ${err.message}`, 100, 'error');
+      Toast.error(err.message || 'Batch describe failed');
+    }
+  };
+
+  window.useAsPrompt = function() {
+    const prompt = document.getElementById('desc-prompt-text').value;
+    if (prompt) {
+      window.location.href = `/generate?prompt=${encodeURIComponent(prompt)}`;
+    }
+  };
+
+  window.copyPrompt = function() {
+    const prompt = document.getElementById('desc-prompt-text').value;
+    if (prompt) {
+      navigator.clipboard.writeText(prompt).then(() => Toast.success('Prompt copied!'));
+    }
+  };
+
+  // ---- History ----
+  window.toggleHistory = function() {
+    const body = document.getElementById('history-body');
+    const chevron = document.getElementById('history-chevron');
+    body.classList.toggle('open');
+    chevron.classList.toggle('open');
+    if (body.classList.contains('open') && body.children.length <= 1) {
+      loadHistory();
+    }
+  };
+
+  async function loadHistory(append) {
+    if (!append) historyOffset = 0;
+    try {
+      const resp = await fetch(`/api/v1/utilities/history?limit=${historyLimit}&offset=${historyOffset}`);
+      if (!resp.ok) return;
+      const data = await resp.json();
+
+      document.getElementById('history-count').textContent = data.total || 0;
+      const container = document.getElementById('history-items');
+      const emptyEl = document.getElementById('history-empty');
+      const loadMoreBtn = document.getElementById('history-load-more');
+
+      if (!data.operations || data.operations.length === 0) {
+        if (emptyEl) emptyEl.style.display = 'block';
+        if (loadMoreBtn) loadMoreBtn.style.display = 'none';
+        return;
+      }
+
+      if (emptyEl) emptyEl.style.display = 'none';
+
+      const html = data.operations.map(op => {
+        const iconCls = op.operation;
+        const iconText = {upscale: '\u2191', bg_remove: '\u2206', describe: '\u270e', batch_upscale: '\u2195', batch_describe: '\u2637'}[op.operation] || '\u2022';
+        const timeAgo = formatTimeAgo(op.created_at);
+        const duration = op.duration_ms ? `${op.duration_ms}ms` : '';
+        const detail = op.operation === 'upscale' && op.result?.upscaled_width
+          ? `${op.result.original_width}x${op.result.original_height} \u2192 ${op.result.upscaled_width}x${op.result.upscaled_height}`
+          : op.operation === 'batch_upscale' || op.operation === 'batch_describe'
+          ? `${op.batch_completed || 0}/${op.batch_total || '?'} completed`
+          : op.error_message ? op.error_message.substring(0, 60) : op.provider;
+
+        return `<div class="util-history-item">
+          <div class="util-history-icon ${iconCls}">${iconText}</div>
+          <div class="util-history-info">
+            <div class="util-history-op">${op.operation_label}</div>
+            <div class="util-history-meta">
+              <span>${detail}</span>
+              ${duration ? `<span>\u00b7 ${duration}</span>` : ''}
+              <span>\u00b7 ${timeAgo}</span>
+            </div>
+          </div>
+          <span class="util-history-status ${op.status}">${op.status}</span>
+        </div>`;
+      }).join('');
+
+      if (append) {
+        container.insertAdjacentHTML('beforeend', html);
+      } else {
+        container.innerHTML = html;
+      }
+
+      historyOffset += data.operations.length;
+      if (loadMoreBtn) {
+        loadMoreBtn.style.display = data.has_more ? 'block' : 'none';
+      }
+    } catch (e) { /* silent */ }
+  }
+
+  window.loadMoreHistory = function() {
+    loadHistory(true);
+  };
+
+  function formatTimeAgo(isoString) {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    const now = new Date();
+    const diff = Math.floor((now - date) / 1000);
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
+  }
+
+})();
+</script>
+{% endblock %}

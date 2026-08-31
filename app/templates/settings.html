@@ -1,0 +1,1117 @@
+{% extends "base.html" %}
+{% block title %}Settings — AI Studio{% endblock %}
+
+{% block header_left %}
+<h4 style="font-size:var(--text-base);font-weight:var(--weight-semibold);">Settings</h4>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:960px;">
+
+  <!-- ======== Settings Tabs ======== -->
+  <div class="tabs" id="settings-tabs" style="margin-bottom:var(--space-6);">
+    <button class="tab active" data-tab="appearance">🎨 Appearance</button>
+    <button class="tab" data-tab="defaults">⚡ Defaults</button>
+    <button class="tab" data-tab="privacy">🔒 Privacy</button>
+    <button class="tab" data-tab="notifications">🔔 Notifications</button>
+    <button class="tab" data-tab="account">👤 Account</button>
+    <button class="tab" data-tab="usage">📊 Usage</button>
+  </div>
+
+  <!-- ======== APPEARANCE ======== -->
+  <div class="settings-panel active" id="panel-appearance">
+    <div class="card" style="max-width:680px;">
+      <div class="card-header">
+        <h4 class="card-title">Theme</h4>
+      </div>
+      <div class="card-body">
+        <p class="text-sm text-muted mb-4">Choose your preferred color scheme.</p>
+        <div class="theme-selector" id="theme-selector">
+          {% for theme in options.themes %}
+          <button class="theme-option {% if settings.theme == theme.id %}active{% endif %}"
+                  data-theme-value="{{ theme.id }}" onclick="setTheme('{{ theme.id }}')">
+            <div class="theme-preview theme-preview-{{ theme.id }}">
+              {% if theme.id == 'light' %}
+              <div class="theme-preview-inner" style="background:#fff;border:1px solid #dee2e6;">
+                <div style="height:4px;background:#f1f3f5;border-radius:2px;margin:4px;"></div>
+                <div style="height:4px;background:#4263eb;border-radius:2px;margin:4px;width:60%;"></div>
+              </div>
+              {% elif theme.id == 'dark' %}
+              <div class="theme-preview-inner" style="background:#25262b;border:1px solid #373a40;">
+                <div style="height:4px;background:#373a40;border-radius:2px;margin:4px;"></div>
+                <div style="height:4px;background:#748ffc;border-radius:2px;margin:4px;width:60%;"></div>
+              </div>
+              {% else %}
+              <div class="theme-preview-inner" style="background:linear-gradient(135deg,#fff 50%,#25262b 50%);border:1px solid #dee2e6;">
+                <div style="height:4px;background:#f1f3f5;border-radius:2px;margin:4px;"></div>
+                <div style="height:4px;background:#4263eb;border-radius:2px;margin:4px;width:60%;"></div>
+              </div>
+              {% endif %}
+            </div>
+            <span class="text-sm font-medium">{{ theme.name }}</span>
+            {% if settings.theme == theme.id %}
+            <span class="badge badge-brand" style="font-size:10px;">Active</span>
+            {% endif %}
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-4" style="max-width:680px;">
+      <div class="card-header">
+        <h4 class="card-title">Display</h4>
+      </div>
+      <div class="card-body">
+        <div class="flex flex-col gap-4">
+          <label class="toggle-row">
+            <div>
+              <div class="text-sm font-medium">Compact Mode</div>
+              <div class="text-xs text-muted">Reduce spacing for a denser interface</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" data-setting="compact_mode" {% if settings.compact_mode %}checked{% endif %} onchange="toggleSetting('compact_mode', this.checked)">
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            </label>
+          </label>
+          <label class="toggle-row">
+            <div>
+              <div class="text-sm font-medium">Animations</div>
+              <div class="text-xs text-muted">Enable smooth transitions and animations</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" data-setting="animations_enabled" {% if settings.animations_enabled %}checked{% endif %} onchange="toggleSetting('animations_enabled', this.checked)">
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            </label>
+          </label>
+          <label class="toggle-row">
+            <div>
+              <div class="text-sm font-medium">Reduce Motion</div>
+              <div class="text-xs text-muted">Minimize animations for accessibility</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" data-setting="reduce_motion" {% if settings.reduce_motion %}checked{% endif %} onchange="toggleSetting('reduce_motion', this.checked)">
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            </label>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-4" style="max-width:680px;">
+      <div class="card-header">
+        <h4 class="card-title">Reset Appearance</h4>
+      </div>
+      <div class="card-body">
+        <p class="text-sm text-muted mb-3">Reset appearance settings to factory defaults.</p>
+        <button class="btn btn-secondary btn-sm" onclick="resetSection('appearance')">Reset Appearance</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== GENERATION DEFAULTS ======== -->
+  <div class="settings-panel" id="panel-defaults">
+    <div class="card" style="max-width:680px;">
+      <div class="card-header">
+        <h4 class="card-title">Default Model</h4>
+      </div>
+      <div class="card-body">
+        <p class="text-sm text-muted mb-4">Choose the AI model used by default when creating new images.</p>
+        <select class="select" id="default_model" onchange="updateSetting('default_model', this.value)">
+          {% for model in options.models %}
+          <option value="{{ model.id }}" {% if settings.default_model == model.id %}selected{% endif %}>
+            {{ model.name }}{% if not model.configured %} (Not configured){% endif %}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="card mt-4" style="max-width:680px;">
+      <div class="card-header">
+        <h4 class="card-title">Default Style</h4>
+      </div>
+      <div class="card-body">
+        <p class="text-sm text-muted mb-4">Pre-selected style when opening the generator.</p>
+        <div class="style-chips" id="default-style-chips">
+          {% for style in options.styles %}
+          <button class="chip {% if settings.default_style == style.id %}chip-active{% endif %}"
+                  data-value="{{ style.id }}" onclick="selectChip(this, 'default_style', '{{ style.id }}')">
+            {{ style.name }}
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-4" style="max-width:680px;">
+      <div class="card-header">
+        <h4 class="card-title">Default Aspect Ratio</h4>
+      </div>
+      <div class="card-body">
+        <div class="aspect-ratio-group" id="default-ratio-group">
+          {% for ratio in options.ratios %}
+          <button class="aspect-ratio-btn {% if settings.default_ratio == ratio.id %}active{% endif %}"
+                  data-ratio="{{ ratio.id }}" onclick="selectRatio(this, 'default_ratio', '{{ ratio.id }}')">
+            <div class="aspect-ratio-preview" style="
+              {% if ratio.id == '1:1' %}height:24px;
+              {% elif ratio.id == '16:9' %}height:14px;width:32px;
+              {% elif ratio.id == '9:16' %}height:32px;width:14px;
+              {% elif ratio.id == '4:3' %}height:18px;width:24px;
+              {% elif ratio.id == '3:4' %}height:24px;width:18px;
+              {% endif %}"></div>
+            <span class="aspect-ratio-label">{{ ratio.name }}</span>
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-4" style="max-width:680px;">
+      <div class="card-header">
+        <h4 class="card-title">Default Quality & Count</h4>
+      </div>
+      <div class="card-body">
+        <div class="flex flex-col gap-4">
+          <div class="form-group">
+            <label class="form-label">Quality</label>
+            <div class="flex gap-2" id="default-quality-group">
+              {% for q in options.qualities %}
+              <button class="chip {% if settings.default_quality == q.id %}chip-active{% endif %}"
+                      data-value="{{ q.id }}" onclick="selectChip(this, 'default_quality', '{{ q.id }}')">
+                {{ q.name }}
+              </button>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Number of images</label>
+            <div class="flex gap-2" id="default-count-group">
+              {% for c in options.output_counts %}
+              <button class="chip {% if settings.default_output_count == c.id %}chip-active{% endif %}"
+                      data-value="{{ c.id }}" onclick="selectChip(this, 'default_output_count', {{ c.id }})">
+                {{ c.name }}
+              </button>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-4" style="max-width:680px;">
+      <div class="card-header">
+        <h4 class="card-title">Advanced Options</h4>
+      </div>
+      <div class="card-body">
+        <div class="flex flex-col gap-4">
+          <label class="toggle-row">
+            <div>
+              <div class="text-sm font-medium">Auto Enhance</div>
+              <div class="text-xs text-muted">Automatically enhance prompts before generation</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" {% if settings.auto_enhance %}checked{% endif %} onchange="toggleSetting('auto_enhance', this.checked)">
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            </label>
+          </label>
+          <label class="toggle-row">
+            <div>
+              <div class="text-sm font-medium">Show Negative Prompt</div>
+              <div class="text-xs text-muted">Show the negative prompt field by default</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" {% if settings.show_negative_prompt %}checked{% endif %} onchange="toggleSetting('show_negative_prompt', this.checked)">
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            </label>
+          </label>
+          <label class="toggle-row">
+            <div>
+              <div class="text-sm font-medium">Show Seed</div>
+              <div class="text-xs text-muted">Show the seed input by default</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" {% if settings.show_seed %}checked{% endif %} onchange="toggleSetting('show_seed', this.checked)">
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            </label>
+          </label>
+          <label class="toggle-row">
+            <div>
+              <div class="text-sm font-medium">Show Advanced Options</div>
+              <div class="text-xs text-muted">Expand advanced options by default in the generator</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" {% if settings.show_advanced %}checked{% endif %} onchange="toggleSetting('show_advanced', this.checked)">
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            </label>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-4" style="max-width:680px;">
+      <div class="card-header">
+        <h4 class="card-title">Reset Defaults</h4>
+      </div>
+      <div class="card-body">
+        <p class="text-sm text-muted mb-3">Reset generation defaults to factory settings.</p>
+        <button class="btn btn-secondary btn-sm" onclick="resetSection('generation_defaults')">Reset Generation Defaults</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== PRIVACY ======== -->
+  <div class="settings-panel" id="panel-privacy">
+    <div class="card" style="max-width:680px;">
+      <div class="card-header">
+        <h4 class="card-title">Default Image Visibility</h4>
+      </div>
+      <div class="card-body">
+        <p class="text-sm text-muted mb-4">Control who can see your generated images by default.</p>
+        <div class="visibility-options" id="privacy-visibility">
+          {% for level in options.privacy_levels %}
+          <label class="radio-card {% if settings.default_image_visibility == level.id %}active{% endif %}"
+                 data-value="{{ level.id }}" onclick="selectVisibility('{{ level.id }}')">
+            <input type="radio" name="visibility" value="{{ level.id }}"
+                   {% if settings.default_image_visibility == level.id %}checked{% endif %} style="display:none;">
+            <div class="radio-card-icon">
+              {% if level.id == 'private' %}
+              🔒
+              {% elif level.id == 'unlisted' %}
+              🔗
+              {% else %}
+              🌐
+              {% endif %}
+            </div>
+            <div class="text-sm font-medium">{{ level.name }}</div>
+            <div class="text-xs text-muted">
+              {% if level.id == 'private' %}
+              Only you can see
+              {% elif level.id == 'unlisted' %}
+              Anyone with the link
+              {% else %}
+              Visible on Explore
+              {% endif %}
+            </div>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-4" style="max-width:680px;">
+      <div class="card-header">
+        <h4 class="card-title">Sharing Preferences</h4>
+      </div>
+      <div class="card-body">
+        <div class="flex flex-col gap-4">
+          <label class="toggle-row">
+            <div>
+              <div class="text-sm font-medium">Allow Sharing</div>
+              <div class="text-xs text-muted">Enable share links on your images</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" {% if settings.allow_sharing %}checked{% endif %} onchange="toggleSetting('allow_sharing', this.checked)">
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            </label>
+          </label>
+          <label class="toggle-row">
+            <div>
+              <div class="text-sm font-medium">Show Profile Publicly</div>
+              <div class="text-xs text-muted">Display your name on shared images</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" {% if settings.show_profile_publicly %}checked{% endif %} onchange="toggleSetting('show_profile_publicly', this.checked)">
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            </label>
+          </label>
+          <label class="toggle-row">
+            <div>
+              <div class="text-sm font-medium">Show Activity Publicly</div>
+              <div class="text-xs text-muted">Let others see your generation count and stats</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" {% if settings.show_activity_publicly %}checked{% endif %} onchange="toggleSetting('show_activity_publicly', this.checked)">
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            </label>
+          </label>
+          <label class="toggle-row">
+            <div>
+              <div class="text-sm font-medium">Watermark</div>
+              <div class="text-xs text-muted">Add a subtle watermark to shared images</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" {% if settings.watermark_enabled %}checked{% endif %} onchange="toggleSetting('watermark_enabled', this.checked)">
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            </label>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-4" style="max-width:680px;">
+      <div class="card-header">
+        <h4 class="card-title">Reset Privacy</h4>
+      </div>
+      <div class="card-body">
+        <button class="btn btn-secondary btn-sm" onclick="resetSection('privacy')">Reset Privacy Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== NOTIFICATIONS ======== -->
+  <div class="settings-panel" id="panel-notifications">
+    <div class="card" style="max-width:680px;">
+      <div class="card-header">
+        <h4 class="card-title">In-App Notifications</h4>
+      </div>
+      <div class="card-body">
+        <div class="flex flex-col gap-4">
+          <label class="toggle-row">
+            <div>
+              <div class="text-sm font-medium">Generation Complete</div>
+              <div class="text-xs text-muted">Show toast when an image finishes generating</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" {% if settings.notify_generation_complete %}checked{% endif %} onchange="toggleSetting('notify_generation_complete', this.checked)">
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            </label>
+          </label>
+          <label class="toggle-row">
+            <div>
+              <div class="text-sm font-medium">Generation Failed</div>
+              <div class="text-xs text-muted">Show toast when a generation fails</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" {% if settings.notify_generation_failed %}checked{% endif %} onchange="toggleSetting('notify_generation_failed', this.checked)">
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            </label>
+          </label>
+          <label class="toggle-row">
+            <div>
+              <div class="text-sm font-medium">System Updates</div>
+              <div class="text-xs text-muted">Get notified about new features and improvements</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" {% if settings.notify_system_updates %}checked{% endif %} onchange="toggleSetting('notify_system_updates', this.checked)">
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            </label>
+          </label>
+          <label class="toggle-row">
+            <div>
+              <div class="text-sm font-medium">Tips & Tricks</div>
+              <div class="text-xs text-muted">Occasionally show helpful tips for better results</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" {% if settings.notify_tips_tricks %}checked{% endif %} onchange="toggleSetting('notify_tips_tricks', this.checked)">
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            </label>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-4" style="max-width:680px;">
+      <div class="card-header">
+        <h4 class="card-title">Email Notifications</h4>
+      </div>
+      <div class="card-body">
+        <div class="flex flex-col gap-4">
+          <label class="toggle-row">
+            <div>
+              <div class="text-sm font-medium">Email Notifications</div>
+              <div class="text-xs text-muted">Receive email updates about your account and generations</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" {% if settings.email_notifications %}checked{% endif %} onchange="toggleSetting('email_notifications', this.checked)">
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            </label>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-4" style="max-width:680px;">
+      <div class="card-header">
+        <h4 class="card-title">Toast Duration</h4>
+      </div>
+      <div class="card-body">
+        <p class="text-sm text-muted mb-4">How long toast notifications stay on screen (1-15 seconds).</p>
+        <div class="flex items-center gap-4">
+          <input type="range" class="slider" min="1000" max="15000" step="500"
+                 value="{{ settings.toast_duration }}"
+                 id="toast-duration-slider"
+                 oninput="document.getElementById('toast-duration-value').textContent = (this.value / 1000).toFixed(1) + 's'"
+                 onchange="updateSetting('toast_duration', parseInt(this.value))">
+          <span class="text-sm font-medium" id="toast-duration-value" style="min-width:36px;">{{ (settings.toast_duration / 1000)|round(1) }}s</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-4" style="max-width:680px;">
+      <div class="card-header">
+        <h4 class="card-title">Reset Notifications</h4>
+      </div>
+      <div class="card-body">
+        <button class="btn btn-secondary btn-sm" onclick="resetSection('notifications')">Reset Notification Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== ACCOUNT ======== -->
+  <div class="settings-panel" id="panel-account">
+    <div class="card" style="max-width:680px;">
+      <div class="card-header">
+        <h4 class="card-title">Profile</h4>
+      </div>
+      <div class="card-body">
+        <div class="flex flex-col gap-4">
+          <div class="form-group">
+            <label class="form-label">Username</label>
+            <input type="text" class="input" value="{{ current_user.username }}" disabled
+                   style="background:var(--bg-tertiary);opacity:0.7;">
+            <span class="form-hint">Username cannot be changed from settings.</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Display Name</label>
+            <input type="text" class="input" id="profile-display-name"
+                   value="{{ settings.display_name or '' }}" placeholder="Your display name"
+                   maxlength="100">
+            <span class="form-hint">Shown publicly on shared images.</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="email" class="input" value="{{ current_user.email }}" disabled
+                   style="background:var(--bg-tertiary);opacity:0.7;">
+            <span class="form-hint">Contact support to change your email.</span>
+          </div>
+          <button class="btn btn-primary btn-sm" style="align-self:flex-start;" onclick="saveProfile()">Save Profile</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-4" style="max-width:680px;">
+      <div class="card-header">
+        <h4 class="card-title">Change Password</h4>
+      </div>
+      <div class="card-body">
+        <div class="flex flex-col gap-4">
+          <div class="form-group">
+            <label class="form-label">Current Password</label>
+            <input type="password" class="input" id="current-password" placeholder="Enter current password">
+          </div>
+          <div class="form-group">
+            <label class="form-label">New Password</label>
+            <input type="password" class="input" id="new-password" placeholder="Enter new password (min 8 chars)">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Confirm New Password</label>
+            <input type="password" class="input" id="confirm-password" placeholder="Confirm new password">
+          </div>
+          <div id="password-strength" style="display:none;">
+            <div style="height:4px;background:var(--bg-tertiary);border-radius:var(--radius-full);overflow:hidden;margin-bottom:var(--space-2);">
+              <div id="password-strength-bar" style="height:100%;width:0%;transition:width 0.3s,background 0.3s;border-radius:var(--radius-full);"></div>
+            </div>
+            <span class="text-xs" id="password-strength-text"></span>
+          </div>
+          <button class="btn btn-primary btn-sm" style="align-self:flex-start;" onclick="changePassword()">Change Password</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-4" style="max-width:680px;">
+      <div class="card-header">
+        <h4 class="card-title">Export Data</h4>
+      </div>
+      <div class="card-body">
+        <p class="text-sm text-muted mb-3">Download all your data including settings, generations, images, and prompts.</p>
+        <button class="btn btn-secondary btn-sm" onclick="exportData()">Export All Data (JSON)</button>
+      </div>
+    </div>
+
+    <div class="card mt-4" style="max-width:680px;">
+      <div class="card-header">
+        <h4 class="card-title" style="color:var(--danger-600);">Danger Zone</h4>
+      </div>
+      <div class="card-body">
+        <div style="border:1px solid var(--danger-200);border-radius:var(--radius-lg);padding:var(--space-4);">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-sm font-medium">Deactivate Account</div>
+              <div class="text-xs text-muted">Your account will be disabled. Data is preserved.</div>
+            </div>
+            <button class="btn btn-danger btn-sm" onclick="Modal.show('deactivate-modal')">Deactivate</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-4" style="max-width:680px;">
+      <div class="card-header">
+        <h4 class="card-title">Sign Out</h4>
+      </div>
+      <div class="card-body">
+        <form method="POST" action="/logout" style="display:inline;">
+          <button type="submit" class="btn btn-secondary">Sign Out</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== USAGE DASHBOARD ======== -->
+  <div class="settings-panel" id="panel-usage">
+    <div class="card" style="max-width:680px;">
+      <div class="card-header">
+        <h4 class="card-title">Overview</h4>
+      </div>
+      <div class="card-body">
+        <div class="stats-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:var(--space-4);">
+          <div class="stat-card">
+            <div class="stat-value" style="font-size:var(--text-2xl);font-weight:var(--weight-bold);color:var(--brand-600);">{{ stats.total_generations }}</div>
+            <div class="stat-label text-xs text-muted">Total Generations</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" style="font-size:var(--text-2xl);font-weight:var(--weight-bold);color:var(--success-600);">{{ stats.completed_generations }}</div>
+            <div class="stat-label text-xs text-muted">Successful</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" style="font-size:var(--text-2xl);font-weight:var(--weight-bold);color:var(--danger-600);">{{ stats.failed_generations }}</div>
+            <div class="stat-label text-xs text-muted">Failed</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" style="font-size:var(--text-2xl);font-weight:var(--weight-bold);color:var(--warning-600);">{{ stats.pending_generations }}</div>
+            <div class="stat-label text-xs text-muted">Pending</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" style="font-size:var(--text-2xl);font-weight:var(--weight-bold);">{{ stats.total_images }}</div>
+            <div class="stat-label text-xs text-muted">Total Images</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" style="font-size:var(--text-2xl);font-weight:var(--weight-bold);">{{ stats.favorited_images }}</div>
+            <div class="stat-label text-xs text-muted">Favorites</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" style="font-size:var(--text-2xl);font-weight:var(--weight-bold);">{{ stats.total_collections }}</div>
+            <div class="stat-label text-xs text-muted">Collections</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" style="font-size:var(--text-2xl);font-weight:var(--weight-bold);">{{ stats.total_prompts }}</div>
+            <div class="stat-label text-xs text-muted">Saved Prompts</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-4" style="max-width:680px;">
+      <div class="card-header">
+        <h4 class="card-title">Activity</h4>
+      </div>
+      <div class="card-body">
+        <div class="stats-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:var(--space-4);">
+          <div class="stat-card">
+            <div class="stat-value" style="font-size:var(--text-xl);font-weight:var(--weight-bold);">{{ stats.weekly_generations }}</div>
+            <div class="stat-label text-xs text-muted">This Week</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" style="font-size:var(--text-xl);font-weight:var(--weight-bold);">{{ stats.monthly_generations }}</div>
+            <div class="stat-label text-xs text-muted">This Month</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" style="font-size:var(--text-xl);font-weight:var(--weight-bold);">{{ stats.avg_per_day }}</div>
+            <div class="stat-label text-xs text-muted">Avg/Day (30d)</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" style="font-size:var(--text-xl);font-weight:var(--weight-bold);">{{ stats.success_rate }}%</div>
+            <div class="stat-label text-xs text-muted">Success Rate</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-4" style="max-width:680px;">
+      <div class="card-header">
+        <h4 class="card-title">Storage</h4>
+      </div>
+      <div class="card-body">
+        <div class="flex items-center gap-4">
+          <div>
+            <div style="font-size:var(--text-2xl);font-weight:var(--weight-bold);">{{ stats.total_size_mb }}</div>
+            <div class="text-xs text-muted">MB Used</div>
+          </div>
+          <div style="flex:1;">
+            <div style="height:8px;background:var(--bg-tertiary);border-radius:var(--radius-full);overflow:hidden;">
+              <div style="height:100%;background:var(--brand-500);border-radius:var(--radius-full);width:{% if stats.total_size_mb < 100 %}{{ (stats.total_size_mb / 100 * 100)|round }}{% elif stats.total_size_mb < 500 %}{{ ((stats.total_size_mb - 100) / 400 * 100)|round }}{% else %}100{% endif %}%;"></div>
+            </div>
+            <div class="flex justify-between mt-1">
+              <span class="text-xs text-muted">0 MB</span>
+              <span class="text-xs text-muted">1 GB</span>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4">
+          <div class="text-xs text-muted">Images: {{ stats.total_images }} · Public: {{ stats.public_images }} · References: {{ stats.total_references }}</div>
+        </div>
+      </div>
+    </div>
+
+    {% if stats.top_styles %}
+    <div class="card mt-4" style="max-width:680px;">
+      <div class="card-header">
+        <h4 class="card-title">Top Styles</h4>
+      </div>
+      <div class="card-body">
+        <div class="flex flex-col gap-2">
+          {% for item in stats.top_styles %}
+          <div class="flex items-center gap-3">
+            <span class="text-sm font-medium" style="min-width:100px;">{{ item.style }}</span>
+            <div style="flex:1;height:6px;background:var(--bg-tertiary);border-radius:var(--radius-full);overflow:hidden;">
+              <div style="height:100%;background:var(--brand-500);border-radius:var(--radius-full);width:{% if stats.total_generations > 0 %}{{ (item.count / stats.total_generations * 100)|round }}{% else %}0{% endif %}%;min-width:2%;"></div>
+            </div>
+            <span class="text-xs text-muted" style="min-width:30px;text-align:right;">{{ item.count }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if stats.top_ratios %}
+    <div class="card mt-4" style="max-width:680px;">
+      <div class="card-header">
+        <h4 class="card-title">Top Aspect Ratios</h4>
+      </div>
+      <div class="card-body">
+        <div class="flex flex-col gap-2">
+          {% for item in stats.top_ratios %}
+          <div class="flex items-center gap-3">
+            <span class="text-sm font-medium" style="min-width:100px;">{{ item.ratio }}</span>
+            <div style="flex:1;height:6px;background:var(--bg-tertiary);border-radius:var(--radius-full);overflow:hidden;">
+              <div style="height:100%;background:var(--accent-500);border-radius:var(--radius-full);width:{% if stats.total_generations > 0 %}{{ (item.count / stats.total_generations * 100)|round }}{% else %}0{% endif %}%;min-width:2%;"></div>
+            </div>
+            <span class="text-xs text-muted" style="min-width:30px;text-align:right;">{{ item.count }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="card mt-4" style="max-width:680px;">
+      <div class="card-header">
+        <h4 class="card-title">Account Info</h4>
+      </div>
+      <div class="card-body">
+        <div class="flex flex-col gap-2">
+          <div class="flex justify-between">
+            <span class="text-sm text-muted">Member Since</span>
+            <span class="text-sm font-medium">{{ stats.member_since[:10] if stats.member_since else 'N/A' }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-sm text-muted">Style Presets</span>
+            <span class="text-sm font-medium">{{ stats.total_presets }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-sm text-muted">Reference Images</span>
+            <span class="text-sm font-medium">{{ stats.total_references }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ======== Deactivate Account Modal ======== -->
+<div class="modal-overlay confirm-dialog" id="deactivate-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h4 class="modal-title" style="color:var(--danger-600);">Deactivate Account</h4>
+      <button class="btn btn-ghost btn-sm" onclick="Modal.hide('deactivate-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="confirm-dialog-icon danger">⚠️</div>
+      <p class="text-sm text-muted mb-4">This will disable your account. You will no longer be able to log in. Your data will be preserved.</p>
+      <div class="form-group">
+        <label class="form-label">Enter your password to confirm</label>
+        <input type="password" class="input" id="deactivate-password" placeholder="Your password">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="Modal.hide('deactivate-modal')">Cancel</button>
+      <button class="btn btn-danger" onclick="deactivateAccount()">Deactivate</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ============================================================
+   SETTINGS — Client-side Logic
+   ============================================================ */
+
+(function () {
+  'use strict';
+
+  // ---- Tab Navigation ----
+  const tabs = document.querySelectorAll('#settings-tabs .tab');
+  const panels = document.querySelectorAll('.settings-panel');
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.dataset.tab;
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      panels.forEach(p => {
+        p.classList.toggle('active', p.id === 'panel-' + target);
+        p.style.display = p.id === 'panel-' + target ? 'block' : 'none';
+      });
+    });
+  });
+
+  // Show active panel on load
+  panels.forEach(p => {
+    p.style.display = p.classList.contains('active') ? 'block' : 'none';
+  });
+
+  // ---- Toast Duration Display ----
+  const slider = document.getElementById('toast-duration-slider');
+  const valueDisplay = document.getElementById('toast-duration-value');
+  if (slider && valueDisplay) {
+    valueDisplay.textContent = (slider.value / 1000).toFixed(1) + 's';
+  }
+
+  // ---- Password Strength ----
+  const newPassInput = document.getElementById('new-password');
+  if (newPassInput) {
+    newPassInput.addEventListener('input', function() {
+      const val = this.value;
+      const strength = document.getElementById('password-strength');
+      const bar = document.getElementById('password-strength-bar');
+      const text = document.getElementById('password-strength-text');
+      if (!val) { strength.style.display = 'none'; return; }
+      strength.style.display = 'block';
+      let score = 0;
+      if (val.length >= 8) score++;
+      if (val.length >= 12) score++;
+      if (/[A-Z]/.test(val)) score++;
+      if (/[0-9]/.test(val)) score++;
+      if (/[^A-Za-z0-9]/.test(val)) score++;
+      const levels = [
+        { width: '20%', color: 'var(--danger-500)', label: 'Very weak' },
+        { width: '40%', color: 'var(--danger-500)', label: 'Weak' },
+        { width: '60%', color: 'var(--warning-500)', label: 'Fair' },
+        { width: '80%', color: 'var(--brand-500)', label: 'Strong' },
+        { width: '100%', color: 'var(--success-500)', label: 'Very strong' },
+      ];
+      const level = levels[Math.min(score, 4)];
+      bar.style.width = level.width;
+      bar.style.background = level.color;
+      text.textContent = level.label;
+      text.style.color = level.color;
+    });
+  }
+
+})();
+
+// ---- API Helpers ----
+
+async function apiCall(url, method, body) {
+  try {
+    const opts = { method, headers: { 'Content-Type': 'application/json' } };
+    if (body) opts.body = JSON.stringify(body);
+    const resp = await fetch(url, opts);
+    const data = await resp.json();
+    if (!resp.ok) {
+      const msg = data.error || data.details?.join(', ') || 'Request failed';
+      Toast.error(msg);
+      return null;
+    }
+    return data;
+  } catch (e) {
+    Toast.error('Network error: ' + e.message);
+    return null;
+  }
+}
+
+// ---- Settings Update ----
+
+async function updateSetting(key, value) {
+  const data = await apiCall('/api/v1/settings', 'PUT', { [key]: value });
+  if (data) Toast.success('Setting saved');
+}
+
+async function toggleSetting(key, value) {
+  await updateSetting(key, value);
+}
+
+// ---- Theme ----
+
+async function setTheme(theme) {
+  // Update UI immediately
+  ThemeManager.set(theme);
+  localStorage.setItem('theme-preference', theme === 'system' ? '' : theme);
+
+  // Update chips
+  document.querySelectorAll('#theme-selector .theme-option').forEach(btn => {
+    const isActive = btn.dataset.themeValue === theme;
+    btn.classList.toggle('active', isActive);
+    const badge = btn.querySelector('.badge');
+    if (isActive && !badge) {
+      const b = document.createElement('span');
+      b.className = 'badge badge-brand';
+      b.style.fontSize = '10px';
+      b.textContent = 'Active';
+      btn.appendChild(b);
+    } else if (!isActive && badge) {
+      badge.remove();
+    }
+  });
+
+  // Save to server
+  await updateSetting('theme', theme);
+}
+
+// ---- Chip Selection ----
+
+async function selectChip(el, settingKey, value) {
+  const group = el.parentElement;
+  group.querySelectorAll('.chip').forEach(c => c.classList.remove('chip-active'));
+  el.classList.add('chip-active');
+  await updateSetting(settingKey, value);
+}
+
+// ---- Ratio Selection ----
+
+async function selectRatio(el, settingKey, value) {
+  const group = el.parentElement;
+  group.querySelectorAll('.aspect-ratio-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  await updateSetting(settingKey, value);
+}
+
+// ---- Visibility Selection ----
+
+async function selectVisibility(value) {
+  const cards = document.querySelectorAll('#privacy-visibility .radio-card');
+  cards.forEach(card => {
+    card.classList.toggle('active', card.dataset.value === value);
+    card.querySelector('input').checked = card.dataset.value === value;
+  });
+  await updateSetting('default_image_visibility', value);
+}
+
+// ---- Section Reset ----
+
+async function resetSection(section) {
+  if (!confirm('Reset ' + section.replace('_', ' ') + ' settings to defaults?')) return;
+  const data = await apiCall('/api/v1/settings/reset', 'POST', { section });
+  if (data) {
+    Toast.success('Settings reset');
+    setTimeout(() => location.reload(), 500);
+  }
+}
+
+// ---- Profile ----
+
+async function saveProfile() {
+  const displayName = document.getElementById('profile-display-name').value.trim();
+  const data = await apiCall('/api/v1/account/profile', 'PUT', { display_name: displayName });
+  if (data) Toast.success('Profile updated');
+}
+
+// ---- Password ----
+
+async function changePassword() {
+  const current = document.getElementById('current-password').value;
+  const newPass = document.getElementById('new-password').value;
+  const confirm = document.getElementById('confirm-password').value;
+
+  if (!current) { Toast.warning('Enter your current password'); return; }
+  if (!newPass) { Toast.warning('Enter a new password'); return; }
+  if (newPass.length < 8) { Toast.warning('Password must be at least 8 characters'); return; }
+  if (newPass !== confirm) { Toast.warning('Passwords do not match'); return; }
+
+  const data = await apiCall('/api/v1/account/password', 'POST', {
+    current_password: current,
+    new_password: newPass,
+  });
+  if (data) {
+    Toast.success('Password changed');
+    document.getElementById('current-password').value = '';
+    document.getElementById('new-password').value = '';
+    document.getElementById('confirm-password').value = '';
+    document.getElementById('password-strength').style.display = 'none';
+  }
+}
+
+// ---- Export Data ----
+
+async function exportData() {
+  Toast.info('Preparing export...');
+  try {
+    const resp = await fetch('/api/v1/settings/export', { method: 'POST' });
+    if (!resp.ok) throw new Error('Export failed');
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'ai-studio-export-' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    Toast.success('Data exported');
+  } catch (e) {
+    Toast.error('Export failed');
+  }
+}
+
+// ---- Deactivate Account ----
+
+async function deactivateAccount() {
+  const password = document.getElementById('deactivate-password').value;
+  if (!password) { Toast.warning('Enter your password'); return; }
+
+  const data = await apiCall('/api/v1/account/deactivate', 'POST', { password });
+  if (data) {
+    Toast.success('Account deactivated');
+    setTimeout(() => window.location.href = '/logout', 1500);
+  }
+}
+</script>
+
+<style>
+/* ---- Settings Page Styles ---- */
+
+/* Tab active panel */
+.settings-panel {
+  animation: settings-fade-in 0.2s ease;
+}
+@keyframes settings-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Theme selector */
+.theme-selector {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+}
+.theme-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--bg-primary);
+  border: 2px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.theme-option:hover {
+  border-color: var(--border-strong);
+}
+.theme-option.active {
+  border-color: var(--brand-500);
+  background: var(--brand-50);
+}
+[data-theme="dark"] .theme-option.active {
+  background: rgba(76,110,245,0.1);
+}
+.theme-preview {
+  width: 100%;
+  height: 60px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.theme-preview-inner {
+  width: 100%;
+  height: 100%;
+}
+
+/* Toggle row */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  cursor: default;
+}
+
+/* Radio cards */
+.visibility-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+}
+.radio-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--bg-primary);
+  border: 2px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: center;
+}
+.radio-card:hover {
+  border-color: var(--border-strong);
+}
+.radio-card.active {
+  border-color: var(--brand-500);
+  background: var(--brand-50);
+}
+[data-theme="dark"] .radio-card.active {
+  background: rgba(76,110,245,0.1);
+}
+.radio-card-icon {
+  font-size: 24px;
+  margin-bottom: var(--space-1);
+}
+
+/* Stats grid */
+.stat-card {
+  padding: var(--space-4);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .theme-selector {
+    grid-template-columns: 1fr;
+  }
+  .visibility-options {
+    grid-template-columns: 1fr;
+  }
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  #settings-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+  #settings-tabs .tab {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+</style>
+{% endblock %}

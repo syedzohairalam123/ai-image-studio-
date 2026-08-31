@@ -1,0 +1,540 @@
+{% extends "base.html" %}
+{% block title %}History — AI Studio{% endblock %}
+
+{% block content %}
+<div class="history-page">
+  <div class="history-header">
+    <div>
+      <h3>Generation History</h3>
+      <p class="text-sm text-muted" id="history-count">Loading...</p>
+    </div>
+  </div>
+
+  <!-- Filters & Search Bar -->
+  <div class="history-toolbar">
+    <div class="history-search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="search-input" class="input" placeholder="Search prompts..." autocomplete="off">
+    </div>
+
+    <div class="history-filters">
+      <select id="filter-style" class="select">
+        <option value="">All Styles</option>
+      </select>
+      <select id="filter-model" class="select">
+        <option value="">All Models</option>
+      </select>
+      <select id="filter-status" class="select">
+        <option value="">All Status</option>
+      </select>
+      <label class="checkbox" style="white-space:nowrap;">
+        <input type="checkbox" id="filter-favorite">
+        <span>♥ Favorites</span>
+      </label>
+      <select id="filter-sort" class="select">
+        <option value="newest">Newest First</option>
+        <option value="oldest">Oldest First</option>
+      </select>
+      <input type="date" id="filter-date-from" class="input" placeholder="From" title="Date from">
+      <input type="date" id="filter-date-to" class="input" placeholder="To" title="Date to">
+    </div>
+  </div>
+
+  <!-- Generation Grid -->
+  <div class="history-grid" id="history-grid"></div>
+
+  <!-- Loading State -->
+  <div class="history-loading" id="history-loading" style="display:none;">
+    <div class="skeleton skeleton-image" style="height:200px;border-radius:var(--radius-lg);"></div>
+    <div class="skeleton skeleton-image" style="height:200px;border-radius:var(--radius-lg);"></div>
+    <div class="skeleton skeleton-image" style="height:200px;border-radius:var(--radius-lg);"></div>
+  </div>
+
+  <!-- Empty State -->
+  <div class="empty-state" id="history-empty" style="display:none;">
+    <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+    </svg>
+    <h4 class="empty-state-title">No history yet</h4>
+    <p class="empty-state-description">Start creating and your generations will appear here.</p>
+    <a href="/generate" class="btn btn-primary">Start Creating</a>
+  </div>
+
+  <!-- No Results State -->
+  <div class="empty-state" id="history-no-results" style="display:none;">
+    <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+    <h4 class="empty-state-title">No results found</h4>
+    <p class="empty-state-description">Try adjusting your filters or search term.</p>
+    <button class="btn btn-secondary" onclick="clearFilters()">Clear Filters</button>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination" id="pagination" style="display:none;">
+    <button class="btn btn-secondary btn-sm" id="prev-page" disabled>← Previous</button>
+    <span class="text-sm text-muted" id="page-info">Page 1 of 1</span>
+    <button class="btn btn-secondary btn-sm" id="next-page" disabled>Next →</button>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div class="modal-overlay confirm-dialog" id="delete-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h4 class="modal-title">Delete Image</h4>
+        <button class="btn btn-ghost btn-sm" onclick="Modal.hide('delete-modal')" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="confirm-dialog-icon danger">🗑</div>
+        <p class="text-sm" style="color:var(--text-secondary);">Are you sure you want to delete this image? This action cannot be undone.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="Modal.hide('delete-modal')">Cancel</button>
+        <button class="btn btn-danger" id="confirm-delete-btn">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block head_extra %}
+<style>
+  .history-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-4);
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
+  .history-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin-bottom: var(--space-6);
+    padding: var(--space-4);
+    background: var(--surface-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+  }
+  .history-search {
+    position: relative;
+    max-width: 400px;
+  }
+  .history-search svg {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-tertiary);
+    pointer-events: none;
+  }
+  .history-search .input {
+    padding-left: 36px;
+  }
+  .history-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    align-items: center;
+  }
+  .history-filters .select,
+  .history-filters .input {
+    width: auto;
+    min-width: 130px;
+    max-width: 160px;
+    padding: 0.5rem 0.75rem;
+    font-size: var(--text-xs);
+  }
+  .history-filters .input[type="date"] {
+    min-width: 140px;
+  }
+  .history-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: var(--space-4);
+  }
+  .history-card {
+    background: var(--surface-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: all var(--transition-fast);
+    cursor: pointer;
+  }
+  .history-card:hover {
+    box-shadow: var(--shadow-lg);
+    border-color: var(--border-brand);
+    transform: translateY(-2px);
+  }
+  .history-card-thumb {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    background: var(--bg-tertiary);
+    display: block;
+  }
+  .history-card-body {
+    padding: var(--space-3);
+  }
+  .history-card-prompt {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--text-primary);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: var(--space-2);
+    line-height: 1.4;
+  }
+  .history-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    align-items: center;
+    margin-bottom: var(--space-2);
+  }
+  .history-card-meta .badge {
+    font-size: 10px;
+  }
+  .history-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .history-card-date {
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+  }
+  .history-card-actions {
+    display: flex;
+    gap: var(--space-1);
+  }
+  .history-card-actions button {
+    background: none;
+    border: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: var(--radius-sm);
+    transition: color var(--transition-fast), background var(--transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .history-card-actions button:hover {
+    color: var(--text-primary);
+    background: var(--bg-tertiary);
+  }
+  .history-card-actions button.favorited {
+    color: var(--danger-500);
+  }
+  .history-card-actions button.favorited:hover {
+    color: var(--danger-700);
+  }
+  .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-4);
+    margin-top: var(--space-8);
+    padding-top: var(--space-4);
+  }
+  .history-loading {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: var(--space-4);
+  }
+  .status-badge { text-transform: capitalize; }
+  @media (max-width: 768px) {
+    .history-filters {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .history-filters .select,
+    .history-filters .input {
+      max-width: none;
+      width: 100%;
+    }
+    .history-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (max-width: 480px) {
+    .history-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  'use strict';
+
+  const API = '/api/v1';
+  let currentPage = 1;
+  let searchTimeout = null;
+  let deleteTargetId = null;
+
+  // ---- Load Generations ----
+  async function loadGenerations(page = 1) {
+    currentPage = page;
+    const params = new URLSearchParams();
+    params.set('page', page);
+    params.set('per_page', 20);
+
+    const search = document.getElementById('search-input').value.trim();
+    const style = document.getElementById('filter-style').value;
+    const model = document.getElementById('filter-model').value;
+    const status = document.getElementById('filter-status').value;
+    const favorite = document.getElementById('filter-favorite').checked;
+    const sort = document.getElementById('filter-sort').value;
+    const dateFrom = document.getElementById('filter-date-from').value;
+    const dateTo = document.getElementById('filter-date-to').value;
+
+    if (search) params.set('search', search);
+    if (style) params.set('style', style);
+    if (model) params.set('model', model);
+    if (status) params.set('status', status);
+    if (favorite) params.set('favorite', 'true');
+    if (sort) params.set('sort', sort);
+    if (dateFrom) params.set('date_from', dateFrom);
+    if (dateTo) params.set('date_to', dateTo);
+
+    const grid = document.getElementById('history-grid');
+    const loading = document.getElementById('history-loading');
+    const empty = document.getElementById('history-empty');
+    const noResults = document.getElementById('history-no-results');
+    const pagination = document.getElementById('pagination');
+
+    grid.innerHTML = '';
+    loading.style.display = 'grid';
+    empty.style.display = 'none';
+    noResults.style.display = 'none';
+    pagination.style.display = 'none';
+
+    try {
+      const resp = await fetch(`${API}/generations?${params}`);
+      if (!resp.ok) throw new Error('Failed to load');
+      const data = await resp.json();
+
+      loading.style.display = 'none';
+
+      // Update filter dropdowns from server-provided options
+      updateFilterOptions(data.filters);
+
+      document.getElementById('history-count').textContent =
+        `${data.total} generation${data.total !== 1 ? 's' : ''}`;
+
+      if (data.generations.length === 0) {
+        if (page === 1 && !search && !style && !model && !status && !favorite && !dateFrom && !dateTo) {
+          empty.style.display = 'flex';
+        } else {
+          noResults.style.display = 'flex';
+        }
+        return;
+      }
+
+      data.generations.forEach(gen => {
+        grid.appendChild(createCard(gen));
+      });
+
+      // Pagination
+      if (data.pages > 1) {
+        pagination.style.display = 'flex';
+        document.getElementById('page-info').textContent =
+          `Page ${data.page} of ${data.pages}`;
+        document.getElementById('prev-page').disabled = !data.has_prev;
+        document.getElementById('next-page').disabled = !data.has_next;
+      }
+    } catch (err) {
+      loading.style.display = 'none';
+      Toast.error('Failed to load history');
+    }
+  }
+
+  // ---- Create Card ----
+  function createCard(gen) {
+    const card = document.createElement('div');
+    card.className = 'history-card';
+    card.setAttribute('role', 'button');
+    card.setAttribute('tabindex', '0');
+
+    const thumbSrc = gen.thumbnail_url || '/api/v1/status';
+    const prompt = escapeHtml(gen.prompt || 'Untitled');
+    const status = gen.status || 'unknown';
+    const style = gen.style || '';
+    const date = gen.created_at ? new Date(gen.created_at).toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    }) : '';
+    const imageCount = gen.image_count || 0;
+    const hasFav = gen.has_favorite;
+
+    const statusClass = status === 'completed' ? 'badge-success' :
+                         status === 'failed' ? 'badge-danger' :
+                         status === 'processing' ? 'badge-warning' : 'badge-neutral';
+
+    card.innerHTML = `
+      <img class="history-card-thumb"
+           src="${thumbSrc}"
+           alt="${prompt}"
+           loading="lazy"
+           onerror="this.style.display='none'">
+      <div class="history-card-body">
+        <div class="history-card-prompt">${prompt}</div>
+        <div class="history-card-meta">
+          <span class="badge badge-brand">${escapeHtml(gen.provider || '')}</span>
+          ${style ? `<span class="badge badge-neutral">${escapeHtml(style)}</span>` : ''}
+          <span class="badge ${statusClass} status-badge">${status}</span>
+          ${imageCount > 1 ? `<span class="badge badge-neutral">${imageCount} imgs</span>` : ''}
+        </div>
+        <div class="history-card-footer">
+          <span class="history-card-date">${date}</span>
+          <div class="history-card-actions">
+            <button class="fav-btn ${hasFav ? 'favorited' : ''}"
+                    onclick="event.stopPropagation(); toggleFavorite(${gen.image_id})"
+                    title="Toggle favorite">
+              ${hasFav ? '♥' : '♡'}
+            </button>
+            <button onclick="event.stopPropagation(); confirmDelete(${gen.image_id})"
+                    title="Delete">
+              🗑
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    card.addEventListener('click', () => {
+      if (gen.image_id) {
+        window.location.href = `/images/${gen.image_id}`;
+      }
+    });
+    card.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        card.click();
+      }
+    });
+
+    return card;
+  }
+
+  // ---- Update Filter Options ----
+  function updateFilterOptions(filters) {
+    if (!filters) return;
+
+    const styleSelect = document.getElementById('filter-style');
+    const currentStyle = styleSelect.value;
+    styleSelect.innerHTML = '<option value="">All Styles</option>';
+    (filters.styles || []).forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s;
+      opt.textContent = s;
+      if (s === currentStyle) opt.selected = true;
+      styleSelect.appendChild(opt);
+    });
+
+    const modelSelect = document.getElementById('filter-model');
+    const currentModel = modelSelect.value;
+    modelSelect.innerHTML = '<option value="">All Models</option>';
+    (filters.models || []).forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = m;
+      if (m === currentModel) opt.selected = true;
+      modelSelect.appendChild(opt);
+    });
+
+    const statusSelect = document.getElementById('filter-status');
+    const currentStatus = statusSelect.value;
+    statusSelect.innerHTML = '<option value="">All Status</option>';
+    (filters.statuses || []).forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s;
+      opt.textContent = s.charAt(0).toUpperCase() + s.slice(1);
+      if (s === currentStatus) opt.selected = true;
+      statusSelect.appendChild(opt);
+    });
+  }
+
+  // ---- Toggle Favorite (on generation — toggles first image) ----
+  window.toggleFavorite = async function(imageId) {
+    try {
+      const resp = await fetch(`${API}/images/${imageId}/favorite`, { method: 'POST' });
+      if (!resp.ok) throw new Error('Failed');
+      Toast.success('Favorite updated');
+      loadGenerations(currentPage);
+    } catch (err) {
+      Toast.error('Failed to update favorite');
+    }
+  };
+
+  // ---- Confirm Delete ----
+  window.confirmDelete = function(imageId) {
+    deleteTargetId = imageId;
+    Modal.show('delete-modal');
+  };
+
+  document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
+    if (!deleteTargetId) return;
+    try {
+      const resp = await fetch(`${API}/images/${deleteTargetId}`, { method: 'DELETE' });
+      if (!resp.ok) throw new Error('Failed to delete');
+      Toast.success('Image deleted');
+      Modal.hide('delete-modal');
+      deleteTargetId = null;
+      loadGenerations(currentPage);
+    } catch (err) {
+      Toast.error('Failed to delete image');
+    }
+  });
+
+  // ---- Clear Filters ----
+  window.clearFilters = function() {
+    document.getElementById('search-input').value = '';
+    document.getElementById('filter-style').value = '';
+    document.getElementById('filter-model').value = '';
+    document.getElementById('filter-status').value = '';
+    document.getElementById('filter-favorite').checked = false;
+    document.getElementById('filter-sort').value = 'newest';
+    document.getElementById('filter-date-from').value = '';
+    document.getElementById('filter-date-to').value = '';
+    loadGenerations(1);
+  };
+
+  // ---- Search Debounce ----
+  document.getElementById('search-input').addEventListener('input', () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => loadGenerations(1), 300);
+  });
+
+  // ---- Filter Change Events ----
+  ['filter-style', 'filter-model', 'filter-status', 'filter-sort', 'filter-date-from', 'filter-date-to'].forEach(id => {
+    document.getElementById(id).addEventListener('change', () => loadGenerations(1));
+  });
+  document.getElementById('filter-favorite').addEventListener('change', () => loadGenerations(1));
+
+  // ---- Pagination ----
+  document.getElementById('prev-page').addEventListener('click', () => {
+    if (currentPage > 1) loadGenerations(currentPage - 1);
+  });
+  document.getElementById('next-page').addEventListener('click', () => {
+    loadGenerations(currentPage + 1);
+  });
+
+  // ---- Escape HTML ----
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // ---- Init ----
+  loadGenerations(1);
+})();
+</script>
+{% endblock %}

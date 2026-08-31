@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ image.title or 'Shared Image' }} — AI Studio</title>
+  <meta name="description" content="{{ image.public_prompt or 'AI-generated artwork shared on AI Studio' }}">
+  <meta property="og:title" content="{{ image.title or 'AI-Generated Image' }}">
+  <meta property="og:description" content="{{ image.public_prompt or 'Check out this AI-generated image' }}">
+  <meta property="og:image" content="{{ image.image_url }}">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/variables.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Share Page Layout */
+    .share-page {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: var(--space-8) var(--space-6);
+      width: 100%;
+    }
+
+    /* Header */
+    .share-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-6);
+      padding-bottom: var(--space-4);
+      border-bottom: 1px solid var(--border-default);
+    }
+    .share-brand {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      text-decoration: none;
+      color: var(--text-primary);
+    }
+    .share-brand-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(135deg, var(--brand-500), var(--accent-500));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: var(--weight-bold);
+      font-size: var(--text-xs);
+    }
+    .share-brand-text {
+      font-size: var(--text-sm);
+      font-weight: var(--weight-semibold);
+    }
+
+    /* Image Container */
+    .share-image-container {
+      position: relative;
+      border-radius: var(--radius-2xl);
+      overflow: hidden;
+      border: 1px solid var(--border-default);
+      box-shadow: var(--shadow-xl);
+      background: var(--bg-tertiary);
+      margin-bottom: var(--space-6);
+    }
+    .share-image {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .share-image-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: var(--space-6);
+      background: linear-gradient(transparent, rgba(0,0,0,0.7));
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      opacity: 0;
+      transition: opacity var(--transition-normal);
+    }
+    .share-image-container:hover .share-image-overlay {
+      opacity: 1;
+    }
+
+    /* Info Panel */
+    .share-info {
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      gap: var(--space-6);
+    }
+
+    .share-main {
+      min-width: 0;
+    }
+    .share-title {
+      font-size: var(--text-2xl);
+      font-weight: var(--weight-bold);
+      margin-bottom: var(--space-3);
+      line-height: var(--leading-tight);
+    }
+    .share-prompt {
+      font-size: var(--text-sm);
+      color: var(--text-secondary);
+      line-height: var(--leading-relaxed);
+      margin-bottom: var(--space-4);
+      padding: var(--space-4);
+      background: var(--bg-secondary);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-default);
+    }
+    .share-prompt-label {
+      font-size: var(--text-xs);
+      font-weight: var(--weight-semibold);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: var(--space-2);
+    }
+
+    /* Sidebar */
+    .share-sidebar {
+      background: var(--surface-card);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-xl);
+      padding: var(--space-5);
+      height: fit-content;
+      position: sticky;
+      top: var(--space-6);
+    }
+    .share-meta-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-3) 0;
+      border-bottom: 1px solid var(--border-default);
+    }
+    .share-meta-item:last-child {
+      border-bottom: none;
+    }
+    .share-meta-label {
+      font-size: var(--text-xs);
+      color: var(--text-tertiary);
+      font-weight: var(--weight-medium);
+    }
+    .share-meta-value {
+      font-size: var(--text-sm);
+      font-weight: var(--weight-semibold);
+      color: var(--text-primary);
+    }
+
+    /* Creator */
+    .share-creator {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-4);
+      background: var(--bg-secondary);
+      border-radius: var(--radius-lg);
+      margin-bottom: var(--space-4);
+    }
+    .share-creator-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-full);
+      background: var(--brand-100);
+      color: var(--brand-700);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: var(--weight-bold);
+      font-size: var(--text-sm);
+      flex-shrink: 0;
+    }
+    [data-theme="dark"] .share-creator-avatar {
+      background: var(--brand-900);
+      color: var(--brand-200);
+    }
+    .share-creator-name {
+      font-size: var(--text-sm);
+      font-weight: var(--weight-semibold);
+    }
+    .share-creator-label {
+      font-size: var(--text-xs);
+      color: var(--text-tertiary);
+    }
+
+    /* Actions */
+    .share-actions {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      margin-top: var(--space-4);
+    }
+    .share-actions .btn {
+      width: 100%;
+      justify-content: center;
+    }
+
+    /* Stats */
+    .share-stats {
+      display: flex;
+      gap: var(--space-4);
+      margin-bottom: var(--space-4);
+    }
+    .share-stat {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+      font-size: var(--text-sm);
+      color: var(--text-secondary);
+    }
+
+    /* Report Button */
+    .share-report-btn {
+      background: none;
+      border: none;
+      color: var(--text-tertiary);
+      font-size: var(--text-xs);
+      cursor: pointer;
+      padding: var(--space-1) var(--space-2);
+      border-radius: var(--radius-sm);
+      transition: all var(--transition-fast);
+    }
+    .share-report-btn:hover {
+      color: var(--danger-600);
+      background: var(--danger-50);
+    }
+    [data-theme="dark"] .share-report-btn:hover {
+      background: rgba(250,82,82,0.1);
+    }
+
+    /* Report Modal */
+    .report-modal .modal {
+      max-width: 420px;
+    }
+    .report-reasons {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      margin-bottom: var(--space-4);
+    }
+    .report-reason-option {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+    .report-reason-option:hover {
+      border-color: var(--border-brand);
+      background: var(--brand-50);
+    }
+    [data-theme="dark"] .report-reason-option:hover {
+      background: rgba(76,110,245,0.1);
+    }
+    .report-reason-option.selected {
+      border-color: var(--brand-500);
+      background: var(--brand-50);
+    }
+    [data-theme="dark"] .report-reason-option.selected {
+      background: rgba(76,110,245,0.15);
+    }
+    .report-reason-option input {
+      display: none;
+    }
+    .report-reason-label {
+      font-size: var(--text-sm);
+      font-weight: var(--weight-medium);
+    }
+
+    /* Footer */
+    .share-footer {
+      text-align: center;
+      padding: var(--space-8) 0 var(--space-4);
+      color: var(--text-tertiary);
+      font-size: var(--text-xs);
+    }
+    .share-footer a {
+      color: var(--brand-600);
+      text-decoration: none;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .share-page {
+        padding: var(--space-4) var(--space-4);
+      }
+      .share-info {
+        grid-template-columns: 1fr;
+      }
+      .share-title {
+        font-size: var(--text-xl);
+      }
+      .share-image-overlay {
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="share-page">
+    <!-- Header -->
+    <div class="share-header">
+      <a href="/" class="share-brand">
+        <div class="share-brand-icon">✦</div>
+        <span class="share-brand-text">AI Studio</span>
+      </a>
+      <a href="/explore" class="btn btn-ghost btn-sm">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Explore More
+      </a>
+    </div>
+
+    <!-- Image -->
+    <div class="share-image-container">
+      <img class="share-image" src="{{ image.image_url }}" alt="{{ image.title or 'AI-generated image' }}">
+      <div class="share-image-overlay">
+        <div class="share-stats">
+          <span class="share-stat" style="color:#fff;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            {{ image.view_count or 0 }} views
+          </span>
+          <span class="share-stat" style="color:#fff;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            {{ image.like_count or 0 }} likes
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Info -->
+    <div class="share-info">
+      <div class="share-main">
+        {% if image.title %}
+        <h1 class="share-title">{{ image.title }}</h1>
+        {% endif %}
+
+        {% if image.public_prompt %}
+        <div class="share-prompt">
+          <div class="share-prompt-label">Prompt</div>
+          {{ image.public_prompt }}
+        </div>
+        {% endif %}
+
+        <!-- Stats row -->
+        <div class="share-stats" style="margin-top:var(--space-4);">
+          <span class="share-stat">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            {{ image.view_count or 0 }} views
+          </span>
+          <span class="share-stat">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            {{ image.like_count or 0 }} likes
+          </span>
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="share-sidebar">
+        {% if image.creator_display_name %}
+        <div class="share-creator">
+          <div class="share-creator-avatar">{{ image.creator_display_name[0]|upper }}</div>
+          <div>
+            <div class="share-creator-name">{{ image.creator_display_name }}</div>
+            <div class="share-creator-label">Creator</div>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Meta -->
+        <div class="share-meta-item">
+          <span class="share-meta-label">Style</span>
+          <span class="share-meta-value">{{ image.style or 'None' }}</span>
+        </div>
+        <div class="share-meta-item">
+          <span class="share-meta-label">Resolution</span>
+          <span class="share-meta-value">{{ image.width }}×{{ image.height }}</span>
+        </div>
+        <div class="share-meta-item">
+          <span class="share-meta-label">Aspect Ratio</span>
+          <span class="share-meta-value">{{ image.aspect_ratio or 'Unknown' }}</span>
+        </div>
+        <div class="share-meta-item">
+          <span class="share-meta-label">Created</span>
+          <span class="share-meta-value">
+            {% if image.created_at %}
+              {{ image.created_at[:10] }}
+            {% else %}
+              Unknown
+            {% endif %}
+          </span>
+        </div>
+
+        <!-- QR Code -->
+        <div class="share-qr-panel" style="text-align:center;padding:var(--space-4);background:var(--bg-secondary);border-radius:var(--radius-md);margin-bottom:var(--space-4);">
+          <img src="/share/{{ share_token }}/qrcode.png" alt="QR code linking to this shared image"
+               width="128" height="128" style="border-radius:var(--radius-sm);background:#fff;padding:6px;" loading="lazy">
+          <p class="share-meta-label" style="margin-top:var(--space-2);">Scan to open on your phone</p>
+        </div>
+
+        <!-- Actions -->
+        <div class="share-actions">
+          <button class="btn btn-primary" onclick="likeImage()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            Like
+          </button>
+          <button class="btn btn-secondary" onclick="createSimilar()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            Create Similar
+          </button>
+          <button class="share-report-btn" onclick="Modal.show('report-modal')">
+            Report this image
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="share-footer">
+      Created with <a href="/">AI Studio</a> — AI-powered creative studio
+    </div>
+  </div>
+
+  <!-- Report Modal -->
+  <div class="modal-overlay report-modal" id="report-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h4 class="modal-title">Report Image</h4>
+        <button class="btn btn-ghost btn-sm" onclick="Modal.hide('report-modal')" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-sm" style="color:var(--text-secondary);margin-bottom:var(--space-4);">Why are you reporting this image?</p>
+        <div class="report-reasons">
+          <label class="report-reason-option" onclick="selectReason('spam')">
+            <input type="radio" name="report-reason" value="spam">
+            <span class="report-reason-label">Spam or misleading</span>
+          </label>
+          <label class="report-reason-option" onclick="selectReason('inappropriate')">
+            <input type="radio" name="report-reason" value="inappropriate">
+            <span class="report-reason-label">Inappropriate content</span>
+          </label>
+          <label class="report-reason-option" onclick="selectReason('copyright')">
+            <input type="radio" name="report-reason" value="copyright">
+            <span class="report-reason-label">Copyright infringement</span>
+          </label>
+          <label class="report-reason-option" onclick="selectReason('other')">
+            <input type="radio" name="report-reason" value="other">
+            <span class="report-reason-label">Other</span>
+          </label>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="report-desc">Additional details (optional)</label>
+          <textarea class="textarea" id="report-desc" rows="3" placeholder="Provide more context..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="Modal.hide('report-modal')">Cancel</button>
+        <button class="btn btn-danger" id="submit-report-btn" onclick="submitReport()">Submit Report</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <script>
+  (function() {
+    'use strict';
+
+    // Toast (simplified inline version for share page)
+    const Toast = {
+      container: document.getElementById('toast-container'),
+      show(msg, type, duration) {
+        duration = duration || 4000;
+        const icons = { success: '✓', error: '✕', warning: '⚠', info: 'ℹ' };
+        const toast = document.createElement('div');
+        toast.className = 'toast toast-' + (type || 'info');
+        toast.innerHTML = '<span style="font-size:16px;font-weight:bold;">' + (icons[type] || icons.info) + '</span><span>' + msg + '</span><button class="toast-close" onclick="this.closest(\'.toast\').remove()">✕</button>';
+        this.container.appendChild(toast);
+        setTimeout(() => { toast.classList.add('toast-exit'); setTimeout(() => toast.remove(), 300); }, duration);
+      },
+      success(m) { this.show(m, 'success'); },
+      error(m) { this.show(m, 'error', 6000); }
+    };
+
+    // Modal
+    window.Modal = {
+      show(id) {
+        var el = document.getElementById(id);
+        if (el) { el.classList.add('active'); document.body.style.overflow = 'hidden'; }
+      },
+      hide(id) {
+        var el = document.getElementById(id);
+        if (el) { el.classList.remove('active'); document.body.style.overflow = ''; }
+      }
+    };
+
+    var selectedReason = '';
+
+    window.selectReason = function(reason) {
+      selectedReason = reason;
+      document.querySelectorAll('.report-reason-option').forEach(function(el) {
+        el.classList.remove('selected');
+      });
+      event.currentTarget.classList.add('selected');
+    };
+
+    window.likeImage = async function() {
+      try {
+        var resp = await fetch('/api/v1/explore/{{ share_token }}/like', { method: 'POST' });
+        if (!resp.ok) throw new Error('Failed');
+        var data = await resp.json();
+        Toast.success('Liked! (' + data.like_count + ' total)');
+      } catch (err) {
+        Toast.error('Failed to like image');
+      }
+    };
+
+    window.createSimilar = function() {
+      // Redirect to generate page — user can create their own version
+      window.location.href = '/generate';
+    };
+
+    window.submitReport = async function() {
+      if (!selectedReason) {
+        Toast.error('Please select a reason');
+        return;
+      }
+      try {
+        var desc = document.getElementById('report-desc').value;
+        var resp = await fetch('/api/v1/explore/{{ share_token }}/report', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason: selectedReason, description: desc || null })
+        });
+        var data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || 'Failed');
+        Modal.hide('report-modal');
+        Toast.success('Report submitted. Thank you!');
+        selectedReason = '';
+        document.getElementById('report-desc').value = '';
+        document.querySelectorAll('.report-reason-option').forEach(function(el) {
+          el.classList.remove('selected');
+        });
+      } catch (err) {
+        Toast.error(err.message || 'Failed to submit report');
+      }
+    };
+
+    // Close modal on overlay click
+    document.addEventListener('click', function(e) {
+      if (e.target.classList.contains('modal-overlay') && e.target.classList.contains('active')) {
+        e.target.classList.remove('active');
+        document.body.style.overflow = '';
+      }
+    });
+
+    // ESC to close
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-overlay.active').forEach(function(m) {
+          m.classList.remove('active');
+          document.body.style.overflow = '';
+        });
+      }
+    });
+  })();
+  </script>
+</body>
+</html>

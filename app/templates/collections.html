@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+{% block title %}Collections — AI Studio{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/gallery.css') }}">
+{% endblock %}
+
+{% block header_left %}
+<h4 style="font-size:var(--text-base);font-weight:var(--weight-semibold);">Collections</h4>
+{% endblock %}
+
+{% block content %}
+<div class="gallery-page">
+  <!-- Header -->
+  <div class="gallery-header">
+    <div class="gallery-header-left">
+      <h3>Collections</h3>
+      <span class="gallery-count" id="collections-count">Loading...</span>
+    </div>
+    <div class="gallery-header-right">
+      <button class="btn btn-primary btn-sm" onclick="showCreateModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New Collection
+      </button>
+    </div>
+  </div>
+
+  <!-- Collections Grid -->
+  <div class="collections-grid" id="collections-grid"></div>
+
+  <!-- Empty State -->
+  <div class="empty-state" id="collections-empty" style="display:none;">
+    <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+    </svg>
+    <h4 class="empty-state-title">No collections yet</h4>
+    <p class="empty-state-description">Create collections to organize your favorite images.</p>
+    <button class="btn btn-primary" onclick="showCreateModal()">Create Your First Collection</button>
+  </div>
+
+  <!-- Loading State -->
+  <div class="empty-state" id="collections-loading" style="display:none;">
+    <div class="spinner spinner-lg" style="margin-bottom:var(--space-4);"></div>
+    <p class="text-sm text-muted">Loading collections...</p>
+  </div>
+</div>
+
+<!-- Create/Edit Collection Modal -->
+<div class="modal-overlay" id="collection-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h4 class="modal-title" id="modal-title">New Collection</h4>
+      <button class="btn btn-ghost btn-sm" onclick="hideModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group mb-4">
+        <label class="form-label" for="collection-name">Name</label>
+        <input type="text" id="collection-name" class="input" placeholder="My awesome collection" maxlength="200">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="collection-desc">Description (optional)</label>
+        <textarea id="collection-desc" class="textarea" style="min-height:80px;" placeholder="What's this collection about?"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="hideModal()">Cancel</button>
+      <button class="btn btn-primary" id="modal-save-btn" onclick="saveCollection()">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Delete Dialog -->
+<div class="gallery-confirm-overlay" id="confirm-delete-overlay">
+  <div class="gallery-confirm-dialog">
+    <div class="gallery-confirm-icon">🗑️</div>
+    <h4 class="gallery-confirm-title">Delete Collection?</h4>
+    <p class="gallery-confirm-text" id="confirm-delete-text">This will delete the collection. The images inside will NOT be deleted.</p>
+    <div class="gallery-confirm-actions">
+      <button class="btn btn-secondary" onclick="hideConfirmDelete()">Cancel</button>
+      <button class="btn btn-danger" onclick="executeDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  'use strict';
+
+  let collections = [];
+  let editingId = null;
+  let deletingId = null;
+
+  document.addEventListener('DOMContentLoaded', loadCollections);
+
+  async function loadCollections() {
+    const grid = document.getElementById('collections-grid');
+    const empty = document.getElementById('collections-empty');
+    const loading = document.getElementById('collections-loading');
+
+    grid.innerHTML = '';
+    empty.style.display = 'none';
+    loading.style.display = 'flex';
+
+    try {
+      const resp = await fetch('/api/v1/collections');
+      if (!resp.ok) throw new Error('Failed');
+      const data = await resp.json();
+      collections = data.collections;
+
+      loading.style.display = 'none';
+
+      if (collections.length === 0) {
+        empty.style.display = 'flex';
+      } else {
+        renderCollections();
+      }
+
+      document.getElementById('collections-count').textContent =
+        `${collections.length} collection${collections.length !== 1 ? 's' : ''}`;
+    } catch (err) {
+      loading.style.display = 'none';
+      Toast.error('Failed to load collections');
+    }
+  }
+
+  function renderCollections() {
+    const grid = document.getElementById('collections-grid');
+    grid.innerHTML = '';
+
+    collections.forEach(c => {
+      const card = document.createElement('div');
+      card.className = 'collection-card';
+
+      const coverHtml = c.cover_url
+        ? `<img class="collection-card-cover" src="${c.cover_url}" alt="${escapeHtml(c.name)}" loading="lazy">`
+        : `<div class="collection-card-cover-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>`;
+
+      card.innerHTML = `
+        ${coverHtml}
+        <div class="collection-card-actions">
+          <button class="image-card-action" onclick="event.stopPropagation(); editCollection(${c.id})" title="Rename">✏️</button>
+          <button class="image-card-action" onclick="event.stopPropagation(); confirmDelete(${c.id})" title="Delete">🗑️</button>
+        </div>
+        <div class="collection-card-body">
+          <div class="collection-card-name">${escapeHtml(c.name)}</div>
+          ${c.description ? `<div class="collection-card-desc">${escapeHtml(c.description)}</div>` : ''}
+          <div class="collection-card-count">${c.image_count} image${c.image_count !== 1 ? 's' : ''}</div>
+        </div>
+      `;
+
+      card.addEventListener('click', () => {
+        window.location.href = `/collections/${c.id}`;
+      });
+
+      grid.appendChild(card);
+    });
+  }
+
+  // ---- Create/Edit Modal ----
+  window.showCreateModal = function() {
+    editingId = null;
+    document.getElementById('modal-title').textContent = 'New Collection';
+    document.getElementById('modal-save-btn').textContent = 'Create';
+    document.getElementById('collection-name').value = '';
+    document.getElementById('collection-desc').value = '';
+    document.getElementById('collection-modal').classList.add('active');
+    document.getElementById('collection-name').focus();
+  };
+
+  window.editCollection = function(id) {
+    const c = collections.find(col => col.id === id);
+    if (!c) return;
+
+    editingId = id;
+    document.getElementById('modal-title').textContent = 'Edit Collection';
+    document.getElementById('modal-save-btn').textContent = 'Save';
+    document.getElementById('collection-name').value = c.name;
+    document.getElementById('collection-desc').value = c.description || '';
+    document.getElementById('collection-modal').classList.add('active');
+    document.getElementById('collection-name').focus();
+  };
+
+  window.hideModal = function() {
+    document.getElementById('collection-modal').classList.remove('active');
+  };
+
+  window.saveCollection = async function() {
+    const name = document.getElementById('collection-name').value.trim();
+    const description = document.getElementById('collection-desc').value.trim();
+
+    if (!name) { Toast.warning('Collection name is required'); return; }
+
+    try {
+      if (editingId) {
+        const resp = await fetch(`/api/v1/collections/${editingId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, description }),
+        });
+        if (!resp.ok) throw new Error('Failed');
+        Toast.success('Collection updated');
+      } else {
+        const resp = await fetch('/api/v1/collections', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, description }),
+        });
+        if (!resp.ok) throw new Error('Failed');
+        Toast.success('Collection created');
+      }
+
+      hideModal();
+      loadCollections();
+    } catch (err) {
+      Toast.error(editingId ? 'Failed to update' : 'Failed to create');
+    }
+  };
+
+  // ---- Delete ----
+  window.confirmDelete = function(id) {
+    deletingId = id;
+    const c = collections.find(col => col.id === id);
+    document.getElementById('confirm-delete-text').textContent =
+      `This will delete "${c?.name || 'the collection'}". The images inside will NOT be deleted.`;
+    document.getElementById('confirm-delete-overlay').classList.add('active');
+  };
+
+  window.hideConfirmDelete = function() {
+    document.getElementById('confirm-delete-overlay').classList.remove('active');
+    deletingId = null;
+  };
+
+  window.executeDelete = async function() {
+    if (!deletingId) return;
+
+    try {
+      const resp = await fetch(`/api/v1/collections/${deletingId}`, { method: 'DELETE' });
+      if (!resp.ok) throw new Error('Failed');
+      Toast.success('Collection deleted');
+      hideConfirmDelete();
+      loadCollections();
+    } catch (err) {
+      Toast.error('Failed to delete collection');
+    }
+  };
+
+  // ---- Helpers ----
+  function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // ESC to close modals
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      hideModal();
+      hideConfirmDelete();
+    }
+  });
+
+})();
+</script>
+{% endblock %}

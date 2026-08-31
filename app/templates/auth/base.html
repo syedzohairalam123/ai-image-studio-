@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}AI Studio{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/variables.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+  <style>
+    .auth-page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-6);
+      background: var(--bg-secondary);
+    }
+    .auth-card {
+      width: 100%;
+      max-width: 420px;
+      background: var(--surface-card);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+      padding: var(--space-8);
+    }
+    .auth-header {
+      text-align: center;
+      margin-bottom: var(--space-6);
+    }
+    .auth-logo {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      margin-bottom: var(--space-4);
+      text-decoration: none;
+    }
+    .auth-logo-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(135deg, var(--brand-500), var(--accent-500));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: var(--weight-bold);
+      font-size: var(--text-sm);
+    }
+    .auth-logo-text {
+      font-size: var(--text-xl);
+      font-weight: var(--weight-bold);
+      color: var(--text-primary);
+    }
+    .auth-header h2 {
+      font-size: var(--text-2xl);
+      margin-bottom: var(--space-2);
+    }
+    .auth-header p {
+      font-size: var(--text-sm);
+      color: var(--text-secondary);
+      margin: 0;
+    }
+    .auth-form .form-group {
+      margin-bottom: var(--space-4);
+    }
+    .auth-form .btn {
+      width: 100%;
+      margin-top: var(--space-2);
+    }
+    .auth-footer {
+      text-align: center;
+      margin-top: var(--space-6);
+      padding-top: var(--space-4);
+      border-top: 1px solid var(--border-default);
+      font-size: var(--text-sm);
+      color: var(--text-secondary);
+    }
+    .auth-footer a {
+      font-weight: var(--weight-medium);
+    }
+    .flash-messages {
+      margin-bottom: var(--space-4);
+    }
+    .flash {
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--radius-md);
+      font-size: var(--text-sm);
+      margin-bottom: var(--space-2);
+    }
+    .flash-success { background: var(--success-50); color: var(--success-700); border: 1px solid var(--success-100); }
+    .flash-error   { background: var(--danger-50); color: var(--danger-700); border: 1px solid var(--danger-100); }
+    .flash-info    { background: var(--brand-50); color: var(--brand-700); border: 1px solid var(--brand-100); }
+    [data-theme="dark"] .flash-success { background: rgba(64,192,87,0.1); border-color: rgba(64,192,87,0.2); }
+    [data-theme="dark"] .flash-error   { background: rgba(250,82,82,0.1); border-color: rgba(250,82,82,0.2); }
+    [data-theme="dark"] .flash-info    { background: rgba(76,110,245,0.1); border-color: rgba(76,110,245,0.2); }
+    .field-error {
+      font-size: var(--text-xs);
+      color: var(--danger-600);
+      margin-top: var(--space-1);
+    }
+    .remember-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .auth-theme-toggle {
+      position: fixed;
+      top: var(--space-4);
+      right: var(--space-4);
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-card">
+      <div class="auth-header">
+        <a href="/" class="auth-logo">
+          <div class="auth-logo-icon">✦</div>
+          <span class="auth-logo-text">AI Studio</span>
+        </a>
+        {% block auth_header %}{% endblock %}
+      </div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flash-messages">
+          {% for category, message in messages %}
+          <div class="flash flash-{{ category }}" role="alert">{{ message }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      {% endwith %}
+
+      {% block auth_content %}{% endblock %}
+
+      {% block auth_footer %}{% endblock %}
+    </div>
+  </div>
+
+  <div class="auth-theme-toggle">
+    <label class="toggle" title="Toggle dark mode">
+      <input type="checkbox" id="theme-toggle" aria-label="Toggle dark mode">
+      <span class="toggle-track"><span class="toggle-thumb"></span></span>
+    </label>
+  </div>
+
+  <script>
+    (function() {
+      const saved = localStorage.getItem('theme-preference');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.setAttribute('data-theme', saved || (prefersDark ? 'dark' : 'light'));
+      const toggle = document.getElementById('theme-toggle');
+      toggle.checked = document.documentElement.getAttribute('data-theme') === 'dark';
+      toggle.addEventListener('change', function() {
+        const next = this.checked ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme-preference', next);
+      });
+    })();
+  </script>
+</body>
+</html>

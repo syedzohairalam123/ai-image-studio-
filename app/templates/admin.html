@@ -1,0 +1,676 @@
+{% extends "base.html" %}
+{% block title %}Admin Panel — AI Studio{% endblock %}
+
+{% block header_left %}
+<h4 style="font-size:var(--text-base);font-weight:var(--weight-semibold);display:flex;align-items:center;gap:var(--space-2);">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+  Admin Panel
+  <span class="badge badge-danger" style="font-size:10px;">Admin</span>
+</h4>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:1200px;">
+
+  <!-- Admin Tabs -->
+  <div class="tabs" id="admin-tabs" style="margin-bottom:var(--space-6);overflow-x:auto;">
+    <button class="tab active" data-tab="overview" onclick="switchTab('overview',this)">📊 Overview</button>
+    <button class="tab" data-tab="users" onclick="switchTab('users',this)">👥 Users</button>
+    <button class="tab" data-tab="generations" onclick="switchTab('generations',this)">⚡ Generations</button>
+    <button class="tab" data-tab="providers" onclick="switchTab('providers',this)">🔌 Providers</button>
+    <button class="tab" data-tab="moderation" onclick="switchTab('moderation',this)">🛡️ Moderation</button>
+    <button class="tab" data-tab="audit" onclick="switchTab('audit',this)">📋 Audit Log</button>
+  </div>
+
+  <!-- ======== OVERVIEW ======== -->
+  <div class="admin-panel active" id="panel-overview">
+    <div class="admin-stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon" style="background:var(--brand-100);color:var(--brand-600);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div class="stat-value" id="ov-users">{{ dashboard.users.total }}</div>
+        <div class="stat-label">Total Users</div>
+        <div class="stat-sub">{{ dashboard.users.active }} active · {{ dashboard.users.admins }} admin{{ 's' if dashboard.users.admins != 1 }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:var(--success-100);color:var(--success-600);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <div class="stat-value" id="ov-generations">{{ dashboard.generations.total }}</div>
+        <div class="stat-label">Total Generations</div>
+        <div class="stat-sub">{{ dashboard.generations.success_rate }}% success rate</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:var(--accent-100);color:var(--accent-600);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        </div>
+        <div class="stat-value" id="ov-images">{{ dashboard.images.total }}</div>
+        <div class="stat-label">Total Images</div>
+        <div class="stat-sub">{{ dashboard.images.public }} public · {{ dashboard.images.total_size_mb }} MB</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:var(--warning-100);color:var(--warning-600);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div class="stat-value" id="ov-reports">{{ dashboard.reports.pending }}</div>
+        <div class="stat-label">Pending Reports</div>
+        <div class="stat-sub">{{ dashboard.reports.total }} total · {{ dashboard.images.reported }} reported images</div>
+      </div>
+    </div>
+
+    <!-- Generation Breakdown -->
+    <div class="card mt-6" style="max-width:720px;">
+      <div class="card-header"><h4 class="card-title">Generation Breakdown</h4></div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:var(--space-4);">
+          <div>
+            <div style="font-size:var(--text-xl);font-weight:var(--weight-bold);color:var(--success-600);">{{ dashboard.generations.completed }}</div>
+            <div class="text-xs text-muted">Completed</div>
+          </div>
+          <div>
+            <div style="font-size:var(--text-xl);font-weight:var(--weight-bold);color:var(--danger-600);">{{ dashboard.generations.failed }}</div>
+            <div class="text-xs text-muted">Failed</div>
+          </div>
+          <div>
+            <div style="font-size:var(--text-xl);font-weight:var(--weight-bold);color:var(--warning-600);">{{ dashboard.generations.pending }}</div>
+            <div class="text-xs text-muted">Pending</div>
+          </div>
+          <div>
+            <div style="font-size:var(--text-xl);font-weight:var(--weight-bold);">{{ dashboard.generations.last_7d }}</div>
+            <div class="text-xs text-muted">Last 7 days</div>
+          </div>
+        </div>
+        {% if dashboard.images.hidden > 0 %}
+        <div style="margin-top:var(--space-4);padding:var(--space-3);background:var(--danger-50);border-radius:var(--radius-md);border:1px solid var(--danger-100);">
+          <span class="text-sm" style="color:var(--danger-700);">⚠️ {{ dashboard.images.hidden }} hidden image{{ 's' if dashboard.images.hidden != 1 }} — review in Moderation tab</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Provider Quick Status -->
+    <div class="card mt-4" style="max-width:720px;">
+      <div class="card-header"><h4 class="card-title">Provider Status</h4></div>
+      <div class="card-body">
+        <div class="flex flex-col gap-2">
+          {% for p in providers %}
+          <div class="flex items-center gap-3" style="padding:var(--space-2) 0;">
+            <div style="width:8px;height:8px;border-radius:50;background:{% if p.status == 'reachable' %}var(--success-500){% elif p.status == 'configured' %}var(--brand-500){% else %}var(--danger-500){% endif %};flex-shrink:0;border-radius:var(--radius-full);"></div>
+            <span class="text-sm font-medium" style="min-width:120px;">{{ p.display_name }}</span>
+            <span class="badge {% if p.status == 'reachable' %}badge-success{% elif p.status == 'configured' %}badge-brand{% else %}badge-danger{% endif %}">
+              {{ p.status }}
+            </span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== USERS ======== -->
+  <div class="admin-panel" id="panel-users" style="display:none;">
+    <div class="flex items-center justify-between mb-4" style="flex-wrap:wrap;gap:var(--space-3);">
+      <h4 style="font-size:var(--text-lg);font-weight:var(--weight-semibold);">User Management</h4>
+      <div class="flex gap-2">
+        <input type="text" class="input" id="user-search" placeholder="Search users..." style="width:220px;" oninput="debounceLoadUsers()">
+        <select class="select" id="user-status-filter" style="width:140px;" onchange="loadUsers()">
+          <option value="">All Status</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+        <select class="select" id="user-role-filter" style="width:140px;" onchange="loadUsers()">
+          <option value="">All Roles</option>
+          <option value="admin">Admin</option>
+          <option value="user">User</option>
+        </select>
+      </div>
+    </div>
+    <div id="users-list"></div>
+    <div id="users-pagination" class="flex items-center justify-center gap-4 mt-4" style="display:none;">
+      <button class="btn btn-secondary btn-sm" id="users-prev" onclick="changeUserPage(-1)" disabled>← Previous</button>
+      <span class="text-sm text-muted" id="users-page-info"></span>
+      <button class="btn btn-secondary btn-sm" id="users-next" onclick="changeUserPage(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- ======== GENERATIONS ======== -->
+  <div class="admin-panel" id="panel-generations" style="display:none;">
+    <div class="flex items-center justify-between mb-4" style="flex-wrap:wrap;gap:var(--space-3);">
+      <h4 style="font-size:var(--text-lg);font-weight:var(--weight-semibold);">Generation Monitoring</h4>
+      <div class="flex gap-2">
+        <input type="text" class="input" id="gen-search" placeholder="Search prompts..." style="width:220px;" oninput="debounceLoadGenerations()">
+        <select class="select" id="gen-status-filter" style="width:140px;" onchange="loadGenerations()">
+          <option value="">All Status</option>
+          <option value="completed">Completed</option>
+          <option value="failed">Failed</option>
+          <option value="pending">Pending</option>
+          <option value="processing">Processing</option>
+        </select>
+        <select class="select" id="gen-provider-filter" style="width:140px;" onchange="loadGenerations()">
+          <option value="">All Providers</option>
+          {% for p in providers %}
+          <option value="{{ p.name }}">{{ p.display_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div id="generations-list"></div>
+    <div id="generations-pagination" class="flex items-center justify-center gap-4 mt-4" style="display:none;">
+      <button class="btn btn-secondary btn-sm" id="gens-prev" onclick="changeGenPage(-1)" disabled>← Previous</button>
+      <span class="text-sm text-muted" id="gens-page-info"></span>
+      <button class="btn btn-secondary btn-sm" id="gens-next" onclick="changeGenPage(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- ======== PROVIDERS ======== -->
+  <div class="admin-panel" id="panel-providers" style="display:none;">
+    <h4 style="font-size:var(--text-lg);font-weight:var(--weight-semibold);margin-bottom:var(--space-4);">Provider Health</h4>
+    <div id="providers-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:var(--space-4);">
+      {% for p in providers %}
+      <div class="card">
+        <div class="card-header">
+          <h4 class="card-title" style="display:flex;align-items:center;gap:var(--space-2);">
+            {{ p.display_name }}
+            <span class="badge {% if p.status == 'reachable' %}badge-success{% elif p.status == 'configured' %}badge-brand{% else %}badge-danger{% endif %}">
+              {{ p.status }}
+            </span>
+          </h4>
+        </div>
+        <div class="card-body">
+          <div class="flex flex-col gap-2">
+            <div class="flex justify-between text-sm">
+              <span class="text-muted">Configured</span>
+              <span class="font-medium">{{ 'Yes' if p.configured else 'No' }}</span>
+            </div>
+            <div class="divider" style="margin:var(--space-2) 0;"></div>
+            <div class="text-xs text-muted" style="margin-bottom:var(--space-1);">Capabilities</div>
+            <div class="flex flex-wrap gap-1">
+              {% for cap, val in p.capabilities.items() %}
+              {% if val %}
+              <span class="chip chip-active" style="font-size:10px;">{{ cap }}</span>
+              {% endif %}
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ======== MODERATION ======== -->
+  <div class="admin-panel" id="panel-moderation" style="display:none;">
+    <div class="flex items-center justify-between mb-4">
+      <h4 style="font-size:var(--text-lg);font-weight:var(--weight-semibold);">Content Moderation</h4>
+      <div class="flex gap-2">
+        <button class="btn btn-secondary btn-sm active" id="mod-pending-btn" onclick="loadModerationReports('pending',this)">Pending</button>
+        <button class="btn btn-secondary btn-sm" id="mod-all-btn" onclick="loadModerationReports('',this)">All Reports</button>
+      </div>
+    </div>
+    <div id="moderation-stats-bar" class="flex gap-4 mb-4">
+      <div class="badge badge-warning" id="mod-pending-count">— Pending</div>
+      <div class="badge badge-brand" id="mod-reviewed-count">— Reviewed</div>
+      <div class="badge badge-neutral" id="mod-dismissed-count">— Dismissed</div>
+      <div class="badge badge-danger" id="mod-actioned-count">— Hidden</div>
+    </div>
+    <div id="moderation-reports-list"></div>
+    <div id="moderation-pagination" class="flex items-center justify-center gap-4 mt-4" style="display:none;">
+      <button class="btn btn-secondary btn-sm" id="mod-prev" onclick="changeModPage(-1)" disabled>← Previous</button>
+      <span class="text-sm text-muted" id="mod-page-info"></span>
+      <button class="btn btn-secondary btn-sm" id="mod-next" onclick="changeModPage(1)">Next →</button>
+    </div>
+  </div>
+
+  <!-- ======== AUDIT LOG ======== -->
+  <div class="admin-panel" id="panel-audit" style="display:none;">
+    <div class="flex items-center justify-between mb-4">
+      <h4 style="font-size:var(--text-lg);font-weight:var(--weight-semibold);">Audit Log</h4>
+      <div class="flex gap-2">
+        <input type="text" class="input" id="audit-action-search" placeholder="Filter by action..." style="width:200px;" oninput="debounceLoadAudit()">
+        <select class="select" id="audit-entity-filter" style="width:150px;" onchange="loadAuditLogs()">
+          <option value="">All Entities</option>
+          <option value="user">User</option>
+          <option value="image">Image</option>
+          <option value="content_report">Report</option>
+          <option value="generation">Generation</option>
+        </select>
+      </div>
+    </div>
+    <div id="audit-logs-list"></div>
+    <div id="audit-pagination" class="flex items-center justify-center gap-4 mt-4" style="display:none;">
+      <button class="btn btn-secondary btn-sm" id="audit-prev" onclick="changeAuditPage(-1)" disabled>← Previous</button>
+      <span class="text-sm text-muted" id="audit-page-info"></span>
+      <button class="btn btn-secondary btn-sm" id="audit-next" onclick="changeAuditPage(1)">Next →</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- User Detail Modal -->
+<div class="modal-overlay" id="user-detail-modal">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header">
+      <h4 class="modal-title" id="user-detail-title">User Details</h4>
+      <button class="btn btn-ghost btn-sm" onclick="Modal.hide('user-detail-modal')">✕</button>
+    </div>
+    <div class="modal-body" id="user-detail-body"></div>
+    <div class="modal-footer" id="user-detail-actions"></div>
+  </div>
+</div>
+
+<!-- Report Detail Modal -->
+<div class="modal-overlay" id="report-detail-modal">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header">
+      <h4 class="modal-title">Report Details</h4>
+      <button class="btn btn-ghost btn-sm" onclick="Modal.hide('report-detail-modal')">✕</button>
+    </div>
+    <div class="modal-body" id="report-detail-body"></div>
+    <div class="modal-footer" id="report-detail-actions" style="display:none;">
+      <button class="btn btn-secondary" onclick="moderateReport('dismiss')">Dismiss</button>
+      <button class="btn btn-primary" onclick="moderateReport('reviewed')">Reviewed</button>
+      <button class="btn btn-danger" onclick="moderateReport('actioned')">Hide Image</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block head_extra %}
+<style>
+  .admin-panel { animation: admin-fade 0.2s ease; }
+  @keyframes admin-fade { from { opacity: 0; } to { opacity: 1; } }
+  .admin-stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--space-4); }
+  .stat-card { background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: var(--space-5); text-align: center; }
+  .stat-icon { width: 40px; height: 40px; border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: center; margin: 0 auto var(--space-3); }
+  .stat-value { font-size: var(--text-3xl); font-weight: var(--weight-bold); margin-bottom: var(--space-1); }
+  .stat-label { font-size: var(--text-xs); color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; font-weight: var(--weight-medium); }
+  .stat-sub { font-size: var(--text-xs); color: var(--text-tertiary); margin-top: var(--space-1); }
+  .admin-row { display: grid; grid-template-columns: 1fr auto auto; gap: var(--space-3); align-items: center; padding: var(--space-3) var(--space-4); background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); margin-bottom: var(--space-2); transition: border-color var(--transition-fast); }
+  .admin-row:hover { border-color: var(--border-brand); }
+  .admin-row-gen { grid-template-columns: 1fr auto auto auto; }
+  @media (max-width: 768px) {
+    .admin-stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .admin-row, .admin-row-gen { grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  'use strict';
+  // Expose Modal globally
+  window.Modal = {
+    show(id) { var el = document.getElementById(id); if (el) { el.classList.add('active'); document.body.style.overflow = 'hidden'; } },
+    hide(id) { var el = document.getElementById(id); if (el) { el.classList.remove('active'); document.body.style.overflow = ''; } }
+  };
+})();
+
+// ---- State ----
+let userPage = 1, userTotalPages = 1;
+let genPage = 1, genTotalPages = 1;
+let modPage = 1, modTotalPages = 1;
+let auditPage = 1, auditTotalPages = 1;
+let currentModStatus = 'pending';
+let currentReportId = null;
+let currentUserDetailId = null;
+
+// ---- Tabs ----
+function switchTab(tab, el) {
+  document.querySelectorAll('#admin-tabs .tab').forEach(t => t.classList.remove('active'));
+  if (el) el.classList.add('active');
+  document.querySelectorAll('.admin-panel').forEach(p => p.style.display = 'none');
+  const panel = document.getElementById('panel-' + tab);
+  if (panel) panel.style.display = 'block';
+  // Lazy load data
+  if (tab === 'users') loadUsers();
+  if (tab === 'generations') loadGenerations();
+  if (tab === 'moderation') loadModerationReports(currentModStatus);
+  if (tab === 'audit') loadAuditLogs();
+}
+
+// ---- Toast ----
+function showToast(msg, type) {
+  if (window.Toast) { window.Toast.show(msg, type); return; }
+  const icons = { success: '✓', error: '✕', warning: '⚠', info: 'ℹ' };
+  const c = document.getElementById('toast-container') || document.body;
+  const t = document.createElement('div');
+  t.className = 'toast toast-' + (type || 'info');
+  t.innerHTML = '<span style="font-weight:bold;">' + (icons[type]||'ℹ') + '</span><span>' + msg + '</span><button class="toast-close" onclick="this.closest(\'.toast\').remove()">✕</button>';
+  c.appendChild(t);
+  setTimeout(() => { t.classList.add('toast-exit'); setTimeout(() => t.remove(), 300); }, 4000);
+}
+
+// ---- API Helper ----
+async function api(url) {
+  const resp = await fetch(url);
+  if (!resp.ok) {
+    const data = await resp.json().catch(() => ({}));
+    showToast(data.error || 'Request failed', 'error');
+    return null;
+  }
+  return resp.json();
+}
+async function apiPost(url, body) {
+  const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const data = await resp.json();
+  if (!resp.ok) { showToast(data.error || 'Request failed', 'error'); return null; }
+  return data;
+}
+
+// ---- Debounce ----
+let _timers = {};
+function debounce(key, fn, ms) {
+  clearTimeout(_timers[key]);
+  _timers[key] = setTimeout(fn, ms);
+}
+
+// ============================================================
+// USERS
+// ============================================================
+async function loadUsers() {
+  const search = document.getElementById('user-search')?.value || '';
+  const status = document.getElementById('user-status-filter')?.value || '';
+  const role = document.getElementById('user-role-filter')?.value || '';
+  const params = new URLSearchParams({ page: userPage, per_page: 15 });
+  if (search) params.set('search', search);
+  if (status) params.set('status', status);
+  if (role) params.set('role', role);
+
+  const data = await api('/api/v1/admin/users?' + params);
+  if (!data) return;
+
+  userTotalPages = data.pages || 1;
+  const list = document.getElementById('users-list');
+
+  if (!data.users || data.users.length === 0) {
+    list.innerHTML = '<div class="empty-state" style="padding:var(--space-8);"><h4 class="empty-state-title">No users found</h4></div>';
+    document.getElementById('users-pagination').style.display = 'none';
+    return;
+  }
+
+  list.innerHTML = data.users.map(u => `
+    <div class="admin-row" onclick="showUserDetail(${u.id})" style="cursor:pointer;">
+      <div>
+        <div class="text-sm font-medium">${esc(u.username)}</div>
+        <div class="text-xs text-muted">${esc(u.display_name || '')} · Joined ${u.created_at ? u.created_at.substring(0,10) : '—'}</div>
+      </div>
+      <div class="text-xs text-muted" style="text-align:right;">
+        ${u.generation_count || 0} gen${(u.generation_count||0) !== 1 ? 's' : ''} · ${u.image_count || 0} img${(u.image_count||0) !== 1 ? 's' : ''}
+      </div>
+      <div>
+        <span class="badge ${u.is_admin ? 'badge-danger' : (u.is_active ? 'badge-success' : 'badge-neutral')}">${u.is_admin ? 'Admin' : (u.is_active ? 'Active' : 'Inactive')}</span>
+      </div>
+    </div>
+  `).join('');
+
+  const pag = document.getElementById('users-pagination');
+  pag.style.display = userTotalPages > 1 ? 'flex' : 'none';
+  document.getElementById('users-page-info').textContent = `Page ${userPage} of ${userTotalPages}`;
+  document.getElementById('users-prev').disabled = userPage <= 1;
+  document.getElementById('users-next').disabled = userPage >= userTotalPages;
+}
+function debounceLoadUsers() { debounce('users', () => { userPage = 1; loadUsers(); }, 300); }
+function changeUserPage(d) { userPage = Math.max(1, Math.min(userTotalPages, userPage + d)); loadUsers(); }
+
+async function showUserDetail(userId) {
+  currentUserDetailId = userId;
+  const data = await api('/api/v1/admin/users/' + userId);
+  if (!data || !data.user) return;
+  const u = data.user;
+  document.getElementById('user-detail-title').textContent = u.username;
+  document.getElementById('user-detail-body').innerHTML = `
+    <div class="flex flex-col gap-3">
+      <div class="flex justify-between"><span class="text-sm text-muted">Display Name</span><span class="text-sm font-medium">${esc(u.display_name || '—')}</span></div>
+      <div class="flex justify-between"><span class="text-sm text-muted">Email</span><span class="text-sm font-medium">${esc(u.email || '—')}</span></div>
+      <div class="flex justify-between"><span class="text-sm text-muted">Status</span><span class="badge ${u.is_active ? 'badge-success' : 'badge-danger'}">${u.is_active ? 'Active' : 'Inactive'}</span></div>
+      <div class="flex justify-between"><span class="text-sm text-muted">Role</span><span class="badge ${u.is_admin ? 'badge-danger' : 'badge-neutral'}">${u.is_admin ? 'Admin' : 'User'}</span></div>
+      <div class="flex justify-between"><span class="text-sm text-muted">Joined</span><span class="text-sm">${u.created_at ? u.created_at.substring(0,10) : '—'}</span></div>
+      <div class="divider"></div>
+      <div class="flex justify-between"><span class="text-sm text-muted">Generations</span><span class="text-sm font-medium">${u.generation_count} (${u.completed_generations} done, ${u.failed_generations} failed)</span></div>
+      <div class="flex justify-between"><span class="text-sm text-muted">Images</span><span class="text-sm font-medium">${u.image_count} (${u.public_image_count} public)</span></div>
+      <div class="flex justify-between"><span class="text-sm text-muted">Collections</span><span class="text-sm font-medium">${u.collection_count}</span></div>
+      <div class="flex justify-between"><span class="text-sm text-muted">Saved Prompts</span><span class="text-sm font-medium">${u.prompt_count}</span></div>
+      <div class="flex justify-between"><span class="text-sm text-muted">Storage</span><span class="text-sm font-medium">${u.total_size_mb} MB</span></div>
+      ${u.recent_generations && u.recent_generations.length > 0 ? `
+      <div class="divider"></div>
+      <div class="text-xs text-muted" style="margin-bottom:var(--space-1);">Recent Generations</div>
+      ${u.recent_generations.map(g => `
+        <div class="flex items-center gap-2" style="font-size:var(--text-xs);">
+          <span class="badge badge-${g.status === 'completed' ? 'success' : (g.status === 'failed' ? 'danger' : 'neutral')}" style="font-size:9px;">${g.status}</span>
+          <span class="text-muted" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(g.prompt)}</span>
+          <span class="text-muted">${g.provider || ''}</span>
+        </div>
+      `).join('')}
+      ` : ''}
+    </div>
+  `;
+  const actions = document.getElementById('user-detail-actions');
+  actions.innerHTML = `
+    <button class="btn btn-secondary" onclick="Modal.hide('user-detail-modal')">Close</button>
+    ${u.is_active
+      ? `<button class="btn btn-danger btn-sm" onclick="toggleUserActive(${u.id}, false)">Deactivate</button>`
+      : `<button class="btn btn-success btn-sm" onclick="toggleUserActive(${u.id}, true)">Activate</button>`}
+    ${u.is_admin
+      ? `<button class="btn btn-secondary btn-sm" onclick="toggleUserAdmin(${u.id}, false)">Revoke Admin</button>`
+      : `<button class="btn btn-primary btn-sm" onclick="toggleUserAdmin(${u.id}, true)">Grant Admin</button>`}
+  `;
+  Modal.show('user-detail-modal');
+}
+
+async function toggleUserActive(userId, active) {
+  const endpoint = active ? 'activate' : 'deactivate';
+  const data = await apiPost('/api/v1/admin/users/' + userId + '/' + endpoint, {});
+  if (data) {
+    showToast(data.message, 'success');
+    Modal.hide('user-detail-modal');
+    loadUsers();
+  }
+}
+async function toggleUserAdmin(userId, isAdmin) {
+  const data = await apiPost('/api/v1/admin/users/' + userId + '/admin', { is_admin: isAdmin });
+  if (data) {
+    showToast(data.message, 'success');
+    Modal.hide('user-detail-modal');
+    loadUsers();
+  }
+}
+
+// ============================================================
+// GENERATIONS
+// ============================================================
+async function loadGenerations() {
+  const search = document.getElementById('gen-search')?.value || '';
+  const status = document.getElementById('gen-status-filter')?.value || '';
+  const provider = document.getElementById('gen-provider-filter')?.value || '';
+  const params = new URLSearchParams({ page: genPage, per_page: 20 });
+  if (search) params.set('search', search);
+  if (status) params.set('status', status);
+  if (provider) params.set('provider', provider);
+
+  const data = await api('/api/v1/admin/generations?' + params);
+  if (!data) return;
+
+  genTotalPages = data.pages || 1;
+  const list = document.getElementById('generations-list');
+
+  if (!data.generations || data.generations.length === 0) {
+    list.innerHTML = '<div class="empty-state" style="padding:var(--space-8);"><h4 class="empty-state-title">No generations found</h4></div>';
+    document.getElementById('generations-pagination').style.display = 'none';
+    return;
+  }
+
+  list.innerHTML = data.generations.map(g => {
+    const statusBadge = { completed: 'badge-success', failed: 'badge-danger', pending: 'badge-warning', processing: 'badge-brand', cancelled: 'badge-neutral' };
+    return `
+    <div class="admin-row admin-row-gen">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="badge ${statusBadge[g.status] || 'badge-neutral'}" style="font-size:10px;">${g.status}</span>
+          <span class="text-sm font-medium">#${g.id}</span>
+        </div>
+        <div class="text-xs text-muted" style="margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:400px;">${esc(g.prompt)}</div>
+        <div class="text-xs text-muted">${g.failure_category ? '<span style="color:var(--danger-500);">⚠ ' + g.failure_category + '</span> · ' : ''}${esc(g.username || '')} · ${g.created_at ? g.created_at.substring(0,16).replace('T',' ') : ''}</div>
+      </div>
+      <div class="text-xs text-muted" style="text-align:right;min-width:80px;">${esc(g.provider || '—')}</div>
+      <div class="text-xs text-muted" style="text-align:right;min-width:60px;">${esc(g.model || '—')}</div>
+      <div class="text-xs text-muted" style="text-align:right;min-width:40px;">${g.image_count || 0} img</div>
+    </div>
+    `;
+  }).join('');
+
+  const pag = document.getElementById('generations-pagination');
+  pag.style.display = genTotalPages > 1 ? 'flex' : 'none';
+  document.getElementById('gens-page-info').textContent = `Page ${genPage} of ${genTotalPages}`;
+  document.getElementById('gens-prev').disabled = genPage <= 1;
+  document.getElementById('gens-next').disabled = genPage >= genTotalPages;
+}
+function debounceLoadGenerations() { debounce('gens', () => { genPage = 1; loadGenerations(); }, 300); }
+function changeGenPage(d) { genPage = Math.max(1, Math.min(genTotalPages, genPage + d)); loadGenerations(); }
+
+// ============================================================
+// MODERATION
+// ============================================================
+async function loadModerationReports(status, btnEl) {
+  currentModStatus = status || '';
+  modPage = 1;
+  // Update buttons
+  document.querySelectorAll('#panel-moderation .btn').forEach(b => b.classList.remove('active'));
+  if (btnEl) btnEl.classList.add('active');
+  // Load stats
+  const stats = await api('/api/v1/admin/moderation/stats');
+  if (stats) {
+    document.getElementById('mod-pending-count').textContent = (stats.reports?.pending || 0) + ' Pending';
+    document.getElementById('mod-reviewed-count').textContent = (stats.reports?.total || 0) + ' Total';
+    document.getElementById('mod-dismissed-count').textContent = (stats.reports?.dismissed || 0) + ' Dismissed';
+    document.getElementById('mod-actioned-count').textContent = (stats.images?.hidden || 0) + ' Hidden';
+  }
+  await _loadModReports();
+}
+async function _loadModReports() {
+  const params = new URLSearchParams({ page: modPage, per_page: 15 });
+  if (currentModStatus) params.set('status', currentModStatus);
+  const data = await api('/api/v1/admin/moderation/reports?' + params);
+  if (!data) return;
+  modTotalPages = data.pages || 1;
+  const list = document.getElementById('moderation-reports-list');
+  if (!data.reports || data.reports.length === 0) {
+    list.innerHTML = '<div class="empty-state" style="padding:var(--space-8);"><h4 class="empty-state-title">No reports</h4><p class="empty-state-description">Nothing to moderate.</p></div>';
+    document.getElementById('moderation-pagination').style.display = 'none';
+    return;
+  }
+  list.innerHTML = data.reports.map(r => {
+    const statusBadge = { pending: 'badge-warning', reviewed: 'badge-brand', dismissed: 'badge-neutral', actioned: 'badge-danger' };
+    return `
+    <div class="admin-row" onclick="showReportDetail(${JSON.stringify(r).replace(/"/g, '&quot;')})" style="cursor:pointer;">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="badge ${statusBadge[r.status] || 'badge-neutral'}" style="font-size:10px;">${r.status}</span>
+          <span class="text-sm font-medium">${esc(r.reason)}</span>
+        </div>
+        <div class="text-xs text-muted">${esc(r.description || 'No description')} · Report #${r.id} · Image #${r.image_id}</div>
+        <div class="text-xs text-muted">By ${esc(r.reporter_name || 'User')} · ${r.created_at ? r.created_at.substring(0,16).replace('T',' ') : ''}</div>
+      </div>
+      <div>
+        <img src="/api/v1/images/${r.image_id}/thumbnail" style="width:48px;height:48px;object-fit:cover;border-radius:var(--radius-md);background:var(--bg-tertiary);" onerror="this.style.display='none'">
+      </div>
+    </div>
+    `;
+  }).join('');
+  const pag = document.getElementById('moderation-pagination');
+  pag.style.display = modTotalPages > 1 ? 'flex' : 'none';
+  document.getElementById('mod-page-info').textContent = `Page ${modPage} of ${modTotalPages}`;
+  document.getElementById('mod-prev').disabled = modPage <= 1;
+  document.getElementById('mod-next').disabled = modPage >= modTotalPages;
+}
+function changeModPage(d) { modPage = Math.max(1, Math.min(modTotalPages, modPage + d)); _loadModReports(); }
+
+function showReportDetail(report) {
+  currentReportId = report.id;
+  document.getElementById('report-detail-body').innerHTML = `
+    <div style="margin-bottom:var(--space-4);"><img src="/api/v1/images/${report.image_id}/file" style="width:100%;border-radius:var(--radius-lg);background:var(--bg-tertiary);max-height:300px;object-fit:contain;" onerror="this.style.display='none'"></div>
+    <div class="flex flex-col gap-2">
+      <div class="flex justify-between"><span class="text-sm text-muted">Reason</span><span class="text-sm font-medium">${esc(report.reason)}</span></div>
+      <div class="flex justify-between"><span class="text-sm text-muted">Description</span><span class="text-sm">${esc(report.description || 'None')}</span></div>
+      <div class="flex justify-between"><span class="text-sm text-muted">Reporter</span><span class="text-sm">${esc(report.reporter_name || 'User')}</span></div>
+      <div class="flex justify-between"><span class="text-sm text-muted">Status</span><span class="badge badge-${report.status === 'pending' ? 'warning' : 'neutral'}">${report.status}</span></div>
+      <div class="flex justify-between"><span class="text-sm text-muted">Reported</span><span class="text-sm">${report.created_at ? report.created_at.substring(0,16).replace('T',' ') : '—'}</span></div>
+    </div>
+  `;
+  document.getElementById('report-detail-actions').style.display = report.status === 'pending' ? 'flex' : 'none';
+  Modal.show('report-detail-modal');
+}
+
+async function moderateReport(action) {
+  if (!currentReportId) return;
+  const data = await apiPost('/api/v1/admin/moderation/reports/' + currentReportId + '/action', { action });
+  if (data) {
+    showToast('Report ' + action, 'success');
+    Modal.hide('report-detail-modal');
+    _loadModReports();
+    loadModerationReports(currentModStatus);
+  }
+}
+
+// ============================================================
+// AUDIT LOGS
+// ============================================================
+async function loadAuditLogs() {
+  const action = document.getElementById('audit-action-search')?.value || '';
+  const entityType = document.getElementById('audit-entity-filter')?.value || '';
+  const params = new URLSearchParams({ page: auditPage, per_page: 20 });
+  if (action) params.set('action', action);
+  if (entityType) params.set('entity_type', entityType);
+
+  const data = await api('/api/v1/admin/audit-logs?' + params);
+  if (!data) return;
+
+  auditTotalPages = data.pages || 1;
+  const list = document.getElementById('audit-logs-list');
+
+  if (!data.entries || data.entries.length === 0) {
+    list.innerHTML = '<div class="empty-state" style="padding:var(--space-8);"><h4 class="empty-state-title">No audit entries</h4></div>';
+    document.getElementById('audit-pagination').style.display = 'none';
+    return;
+  }
+
+  list.innerHTML = data.entries.map(e => `
+    <div class="admin-row" style="grid-template-columns:1fr 2fr auto;">
+      <div>
+        <div class="text-sm font-medium">${esc(e.action)}</div>
+        <div class="text-xs text-muted">${e.entity_type || ''} ${e.entity_id ? '#' + e.entity_id : ''}</div>
+      </div>
+      <div class="text-xs text-muted" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+        ${e.details ? esc(JSON.stringify(e.details).substring(0, 120)) : '—'}
+        ${e.ip_address ? ' · IP: ' + esc(e.ip_address) : ''}
+      </div>
+      <div class="text-xs text-muted" style="text-align:right;min-width:120px;">
+        <div>${esc(e.admin_name || '—')}</div>
+        <div>${e.created_at ? e.created_at.substring(0,16).replace('T',' ') : ''}</div>
+      </div>
+    </div>
+  `).join('');
+
+  const pag = document.getElementById('audit-pagination');
+  pag.style.display = auditTotalPages > 1 ? 'flex' : 'none';
+  document.getElementById('audit-page-info').textContent = `Page ${auditPage} of ${auditTotalPages}`;
+  document.getElementById('audit-prev').disabled = auditPage <= 1;
+  document.getElementById('audit-next').disabled = auditPage >= auditTotalPages;
+}
+function debounceLoadAudit() { debounce('audit', () => { auditPage = 1; loadAuditLogs(); }, 300); }
+function changeAuditPage(d) { auditPage = Math.max(1, Math.min(auditTotalPages, auditPage + d)); loadAuditLogs(); }
+
+// ---- Helpers ----
+function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+// ---- Modal close on overlay ----
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('modal-overlay') && e.target.classList.contains('active')) {
+    e.target.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,519 @@
+{% extends "base.html" %}
+{% block title %}Image Detail — AI Studio{% endblock %}
+
+{% block content %}
+<div class="detail-page">
+  <div class="detail-layout">
+    <!-- Image Panel -->
+    <div class="detail-image-panel">
+      <div class="detail-image-wrapper">
+        <img id="detail-image" class="detail-image" src="/api/v1/images/{{ image.id }}/file" alt="{{ image.generation.prompt if image.generation else 'Generated image' }}">
+      </div>
+    </div>
+
+    <!-- Info Panel -->
+    <div class="detail-info-panel">
+      <div class="detail-info-header">
+        <h3>Image Details</h3>
+        <a href="/history" class="btn btn-ghost btn-sm">← Back</a>
+      </div>
+
+      <!-- Privacy & Sharing Section -->
+      <div class="detail-section sharing-section">
+        <div class="sharing-header">
+          <div class="sharing-label">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <span class="detail-section-label" style="margin:0;">Visibility</span>
+          </div>
+          <span class="badge {{ 'badge-success' if image.is_public else 'badge-neutral' }}" id="privacy-badge">
+            {{ 'Public' if image.is_public else 'Private' }}
+          </span>
+        </div>
+
+        <div class="sharing-controls">
+          <button class="btn btn-sm {{ 'btn-secondary' if image.is_public else 'btn-primary' }}" id="privacy-btn" onclick="togglePrivacy()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              {% if image.is_public %}
+              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+              <line x1="1" y1="1" x2="23" y2="23"/>
+              {% else %}
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              {% endif %}
+            </svg>
+            {{ 'Make Private' if image.is_public else 'Make Public' }}
+          </button>
+        </div>
+
+        {% if image.is_public and image.share_token %}
+        <div class="share-link-box" id="share-link-box">
+          <div class="share-link-label">Share Link</div>
+          <div class="share-link-row">
+            <input type="text" class="input" id="share-url" value="{{ request.host_url }}share/{{ image.share_token }}" readonly style="font-size:var(--text-xs);padding:var(--space-2) var(--space-3);">
+            <button class="btn btn-ghost btn-sm" onclick="copyShareLink()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              Copy
+            </button>
+            <button class="btn btn-ghost btn-sm" onclick="regenerateToken()" title="Generate new link (old link will stop working)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            </button>
+          </div>
+          <div class="share-link-stats">
+            <span class="text-xs text-muted">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              {{ image.view_count or 0 }} views
+            </span>
+            <span class="text-xs text-muted">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              {{ image.like_count or 0 }} likes
+            </span>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Prompt -->
+      <div class="detail-section">
+        <div class="detail-section-label">Prompt</div>
+        <div class="detail-prompt" id="detail-prompt">{{ image.generation.prompt if image.generation else '' }}</div>
+        <button class="btn btn-ghost btn-sm" onclick="copyPrompt()" style="margin-top:var(--space-2);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Copy Prompt
+        </button>
+      </div>
+
+      <!-- Metadata Grid -->
+      <div class="detail-meta-grid">
+        <div class="detail-meta-item">
+          <span class="detail-meta-label">Model</span>
+          <span class="detail-meta-value">{{ image.generation.model if image.generation and image.generation.model else 'Default' }}</span>
+        </div>
+        <div class="detail-meta-item">
+          <span class="detail-meta-label">Provider</span>
+          <span class="detail-meta-value">{{ image.generation.provider if image.generation else 'Unknown' }}</span>
+        </div>
+        <div class="detail-meta-item">
+          <span class="detail-meta-label">Resolution</span>
+          <span class="detail-meta-value">{{ image.width }}×{{ image.height }}</span>
+        </div>
+        <div class="detail-meta-item">
+          <span class="detail-meta-label">Aspect Ratio</span>
+          <span class="detail-meta-value">{{ image.aspect_ratio or 'Unknown' }}</span>
+        </div>
+        <div class="detail-meta-item">
+          <span class="detail-meta-label">Style</span>
+          <span class="detail-meta-value">{{ (image.generation.parameters or {}).get('style', 'None') if image.generation else 'None' }}</span>
+        </div>
+        <div class="detail-meta-item">
+          <span class="detail-meta-label">Seed</span>
+          <span class="detail-meta-value">{{ image.seed if image.seed else 'Random' }}</span>
+        </div>
+        <div class="detail-meta-item">
+          <span class="detail-meta-label">Created</span>
+          <span class="detail-meta-value">{{ image.created_at.strftime('%b %d, %Y at %I:%M %p') if image.created_at else 'Unknown' }}</span>
+        </div>
+        <div class="detail-meta-item">
+          <span class="detail-meta-label">Status</span>
+          <span class="detail-meta-value">
+            <span class="badge {{ 'badge-success' if image.generation.status == 'completed' else 'badge-danger' if image.generation.status == 'failed' else 'badge-warning' if image.generation.status == 'processing' else 'badge-neutral' }}">
+              {{ image.generation.status if image.generation else 'Unknown' }}
+            </span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="detail-actions">
+        <a href="/api/v1/images/{{ image.id }}/download" class="btn btn-primary" download>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download
+        </a>
+        <button class="btn {{ 'btn-danger' if image.is_favorite else 'btn-secondary' }}" id="fav-btn" onclick="toggleFavorite()">
+          {{ '♥ Unfavorite' if image.is_favorite else '♡ Favorite' }}
+        </button>
+        <button class="btn btn-secondary" onclick="remixImage()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+          Remix
+        </button>
+        <button class="btn btn-secondary" onclick="generateVariations()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="8" height="8" rx="1"/><rect x="14" y="2" width="8" height="8" rx="1"/><rect x="2" y="14" width="8" height="8" rx="1"/><rect x="14" y="14" width="8" height="8" rx="1"/></svg>
+          Variations
+        </button>
+        <button class="btn btn-secondary" onclick="useAsReference()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Use as Ref
+        </button>
+        <button class="btn btn-secondary" onclick="createSimilar()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          Create Similar
+        </button>
+        <button class="btn btn-secondary" onclick="confirmDelete()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          Delete
+        </button>
+      </div>
+
+      <!-- Negative Prompt -->
+      {% if image.generation and image.generation.negative_prompt %}
+      <div class="detail-section" style="margin-top:var(--space-4);">
+        <div class="detail-section-label">Negative Prompt</div>
+        <div class="detail-prompt text-sm text-muted">{{ image.generation.negative_prompt }}</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div class="modal-overlay confirm-dialog" id="delete-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h4 class="modal-title">Delete Image</h4>
+        <button class="btn btn-ghost btn-sm" onclick="Modal.hide('delete-modal')" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="confirm-dialog-icon danger">🗑</div>
+        <p class="text-sm" style="color:var(--text-secondary);">Are you sure you want to delete this image? This action cannot be undone.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="Modal.hide('delete-modal')">Cancel</button>
+        <button class="btn btn-danger" id="confirm-delete-btn">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block head_extra %}
+<style>
+  .detail-layout {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: var(--space-6);
+    max-width: 1200px;
+  }
+  .detail-image-panel {
+    position: sticky;
+    top: calc(var(--header-height) + var(--space-6));
+    height: fit-content;
+  }
+  .detail-image-wrapper {
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    border: 1px solid var(--border-default);
+    box-shadow: var(--shadow-lg);
+    background: var(--bg-tertiary);
+  }
+  .detail-image {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .detail-info-panel {
+    background: var(--surface-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+  }
+  .detail-info-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-5);
+  }
+  .detail-section {
+    margin-bottom: var(--space-4);
+  }
+  .detail-section-label {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: var(--space-1);
+  }
+  .detail-prompt {
+    font-size: var(--text-sm);
+    color: var(--text-primary);
+    line-height: 1.5;
+    word-break: break-word;
+  }
+  .detail-meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+    margin-bottom: var(--space-5);
+  }
+  .detail-meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding: var(--space-3);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+  }
+  .detail-meta-label {
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+    font-weight: var(--weight-medium);
+  }
+  .detail-meta-value {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    color: var(--text-primary);
+  }
+  .detail-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+  }
+  .detail-actions .btn {
+    flex: 1;
+    min-width: 120px;
+    justify-content: center;
+  }
+
+  /* Sharing Section */
+  .sharing-section {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    margin-bottom: var(--space-5);
+    border: 1px solid var(--border-default);
+  }
+  .sharing-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-3);
+  }
+  .sharing-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--text-secondary);
+  }
+  .sharing-controls {
+    margin-bottom: var(--space-3);
+  }
+  .share-link-box {
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--border-default);
+  }
+  .share-link-label {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: var(--space-2);
+  }
+  .share-link-row {
+    display: flex;
+    gap: var(--space-2);
+    align-items: center;
+  }
+  .share-link-row .input {
+    flex: 1;
+    min-width: 0;
+  }
+  .share-link-stats {
+    display: flex;
+    gap: var(--space-4);
+    margin-top: var(--space-2);
+  }
+
+  @media (max-width: 900px) {
+    .detail-layout {
+      grid-template-columns: 1fr;
+    }
+    .detail-image-panel {
+      position: static;
+    }
+  }
+  @media (max-width: 480px) {
+    .detail-meta-grid {
+      grid-template-columns: 1fr;
+    }
+    .detail-actions .btn {
+      min-width: 100%;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  'use strict';
+
+  const imageId = {{ image.id }};
+
+  // Copy prompt
+  window.copyPrompt = function() {
+    const prompt = document.getElementById('detail-prompt').textContent;
+    navigator.clipboard.writeText(prompt).then(() => {
+      Toast.success('Prompt copied to clipboard');
+    }).catch(() => {
+      Toast.error('Failed to copy prompt');
+    });
+  };
+
+  // Toggle favorite
+  window.toggleFavorite = async function() {
+    try {
+      const resp = await fetch(`/api/v1/images/${imageId}/favorite`, { method: 'POST' });
+      if (!resp.ok) throw new Error('Failed');
+      const data = await resp.json();
+      const btn = document.getElementById('fav-btn');
+      if (data.is_favorite) {
+        btn.className = 'btn btn-danger';
+        btn.innerHTML = '♥ Unfavorite';
+        Toast.success('Added to favorites');
+      } else {
+        btn.className = 'btn btn-secondary';
+        btn.innerHTML = '♡ Favorite';
+        Toast.success('Removed from favorites');
+      }
+    } catch (err) {
+      Toast.error('Failed to update favorite');
+    }
+  };
+
+  // Toggle privacy
+  window.togglePrivacy = async function() {
+    try {
+      const resp = await fetch(`/api/v1/images/${imageId}/privacy`, { method: 'POST' });
+      if (!resp.ok) throw new Error('Failed');
+      const data = await resp.json();
+      Toast.success(data.message || 'Privacy updated');
+
+      // Reload page to reflect new state
+      setTimeout(() => { window.location.reload(); }, 500);
+    } catch (err) {
+      Toast.error('Failed to toggle privacy');
+    }
+  };
+
+  // Copy share link
+  window.copyShareLink = function() {
+    const input = document.getElementById('share-url');
+    if (input) {
+      navigator.clipboard.writeText(input.value).then(() => {
+        Toast.success('Share link copied to clipboard');
+      }).catch(() => {
+        input.select();
+        document.execCommand('copy');
+        Toast.success('Share link copied');
+      });
+    }
+  };
+
+  // Regenerate share token
+  window.regenerateToken = async function() {
+    if (!confirm('This will invalidate the current share link. Continue?')) return;
+    try {
+      const resp = await fetch(`/api/v1/images/${imageId}/share/regenerate`, { method: 'POST' });
+      if (!resp.ok) throw new Error('Failed');
+      const data = await resp.json();
+      Toast.success('New share link generated');
+      setTimeout(() => { window.location.reload(); }, 500);
+    } catch (err) {
+      Toast.error('Failed to regenerate token');
+    }
+  };
+
+  // Create Similar
+  window.createSimilar = async function() {
+    try {
+      const resp = await fetch(`/api/v1/images/${imageId}/create-similar`, { method: 'POST' });
+      if (!resp.ok) throw new Error('Failed');
+      const data = await resp.json();
+      const params = data.params;
+      // Navigate to generator with prefilled settings
+      const searchParams = new URLSearchParams();
+      if (params.prompt) searchParams.set('prompt', params.prompt);
+      if (params.style) searchParams.set('style', params.style);
+      if (params.aspect_ratio) searchParams.set('aspect_ratio', params.aspect_ratio);
+      if (params.quality) searchParams.set('quality', params.quality);
+      if (params.negative_prompt) searchParams.set('negative', params.negative_prompt);
+      if (params.reference_image_id) searchParams.set('ref_id', params.reference_image_id);
+      window.location.href = `/generate?${searchParams}`;
+    } catch (err) {
+      Toast.error('Failed to create similar');
+    }
+  };
+
+  // Remix
+  window.remixImage = async function() {
+    try {
+      const resp = await fetch(`/api/v1/images/${imageId}/remix`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      if (!resp.ok) throw new Error('Failed');
+      const data = await resp.json();
+      const params = new URLSearchParams();
+      if (data.prompt) params.set('prompt', data.prompt);
+      if (data.style) params.set('style', data.style);
+      if (data.aspect_ratio) params.set('aspect_ratio', data.aspect_ratio);
+      if (data.quality) params.set('quality', data.quality);
+      if (data.seed) params.set('seed', data.seed);
+      if (data.negative_prompt) params.set('negative', data.negative_prompt);
+      if (data.reference_image_id) params.set('ref_id', data.reference_image_id);
+      if (data.reference_strength) params.set('ref_strength', data.reference_strength);
+      window.location.href = `/generate?${params}`;
+    } catch (err) {
+      Toast.error('Failed to remix');
+    }
+  };
+
+  // Generate Variations
+  window.generateVariations = async function() {
+    try {
+      const resp = await fetch(`/api/v1/images/${imageId}/variations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ count: 2 }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Failed');
+      Toast.success(`Generated ${data.images.length} variation${data.images.length > 1 ? 's' : ''}!`);
+      setTimeout(() => { window.location.href = '/gallery'; }, 1000);
+    } catch (err) {
+      Toast.error(err.message || 'Failed to generate variations');
+    }
+  };
+
+  // Use as Reference
+  window.useAsReference = async function() {
+    try {
+      const resp = await fetch(`/api/v1/images/${imageId}/as-reference`, { method: 'POST' });
+      if (!resp.ok) throw new Error('Failed');
+      Toast.success('Added to references!');
+    } catch (err) {
+      Toast.error('Failed to add as reference');
+    }
+  };
+
+  // Confirm delete
+  window.confirmDelete = function() {
+    Modal.show('delete-modal');
+  };
+
+  document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
+    try {
+      const resp = await fetch(`/api/v1/images/${imageId}`, { method: 'DELETE' });
+      if (!resp.ok) throw new Error('Failed');
+      Toast.success('Image deleted');
+      Modal.hide('delete-modal');
+      setTimeout(() => { window.location.href = '/history'; }, 500);
+    } catch (err) {
+      Toast.error('Failed to delete image');
+    }
+  });
+})();
+</script>
+{% endblock %}

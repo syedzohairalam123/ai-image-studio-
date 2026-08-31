@@ -1,0 +1,355 @@
+{% extends "base.html" %}
+{% block title %}Moderation — AI Studio{% endblock %}
+
+{% block content %}
+<div class="moderation-page">
+  <div class="moderation-header">
+    <div>
+      <h3 style="margin-bottom:var(--space-1);">Content Moderation</h3>
+      <p class="text-sm text-muted">Review reported content and manage moderation states</p>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="moderation-stats" id="moderation-stats">
+    <div class="stat-card">
+      <div class="stat-value" id="stat-pending">—</div>
+      <div class="stat-label">Pending Reports</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="stat-public">—</div>
+      <div class="stat-label">Public Images</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="stat-reported">—</div>
+      <div class="stat-label">Reported</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="stat-hidden">—</div>
+      <div class="stat-label">Hidden</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs" style="margin-bottom:var(--space-5);">
+    <button class="tab active" data-tab="pending" onclick="switchTab('pending', this)">Pending Reports</button>
+    <button class="tab" data-tab="all" onclick="switchTab('all', this)">All Reports</button>
+  </div>
+
+  <!-- Reports List -->
+  <div id="reports-container">
+    <div class="empty-state" id="reports-empty" style="display:none;">
+      <div class="empty-state-icon">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+      <h4 class="empty-state-title">No reports found</h4>
+      <p class="empty-state-description">There are no content reports to review.</p>
+    </div>
+
+    <div id="reports-list"></div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="moderation-pagination" id="pagination" style="display:none;margin-top:var(--space-6);text-align:center;">
+    <button class="btn btn-secondary btn-sm" id="prev-btn" onclick="changePage(-1)" disabled>← Previous</button>
+    <span class="text-sm text-muted" id="page-info" style="margin:0 var(--space-4);"></span>
+    <button class="btn btn-secondary btn-sm" id="next-btn" onclick="changePage(1)">Next →</button>
+  </div>
+
+  <!-- Report Detail Modal -->
+  <div class="modal-overlay" id="report-detail-modal">
+    <div class="modal" style="max-width:560px;">
+      <div class="modal-header">
+        <h4 class="modal-title">Report Details</h4>
+        <button class="btn btn-ghost btn-sm" onclick="Modal.hide('report-detail-modal')" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body" id="report-detail-body">
+        <!-- Filled dynamically -->
+      </div>
+      <div class="modal-footer" id="report-detail-actions" style="display:none;">
+        <button class="btn btn-secondary" onclick="actionReport('dismiss')">Dismiss</button>
+        <button class="btn btn-primary" onclick="actionReport('reviewed')">Reviewed</button>
+        <button class="btn btn-danger" onclick="actionReport('actioned')">Hide Image</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block head_extra %}
+<style>
+  .moderation-page { max-width: 1000px; margin: 0 auto; }
+  .moderation-header { margin-bottom: var(--space-6); }
+
+  .moderation-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+  }
+  .stat-card {
+    background: var(--surface-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    text-align: center;
+  }
+  .stat-value {
+    font-size: var(--text-3xl);
+    font-weight: var(--weight-bold);
+    color: var(--brand-600);
+    margin-bottom: var(--space-1);
+  }
+  .stat-label {
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: var(--weight-medium);
+  }
+
+  .report-card {
+    background: var(--surface-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    margin-bottom: var(--space-3);
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: var(--space-4);
+    align-items: center;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+  .report-card:hover {
+    border-color: var(--border-brand);
+    box-shadow: var(--shadow-sm);
+  }
+  .report-card-thumb {
+    width: 64px;
+    height: 64px;
+    border-radius: var(--radius-md);
+    object-fit: cover;
+    background: var(--bg-tertiary);
+  }
+  .report-card-info {
+    min-width: 0;
+  }
+  .report-card-reason {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    text-transform: capitalize;
+    margin-bottom: var(--space-1);
+  }
+  .report-card-desc {
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .report-card-time {
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+  }
+  .report-card-status {
+    text-align: right;
+  }
+
+  @media (max-width: 768px) {
+    .moderation-stats { grid-template-columns: repeat(2, 1fr); }
+    .report-card { grid-template-columns: auto 1fr; }
+    .report-card-status { grid-column: 1 / -1; text-align: left; }
+  }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  'use strict';
+
+  let currentTab = 'pending';
+  let currentPage = 1;
+  let totalPages = 1;
+  let currentReportId = null;
+
+  // Modal
+  window.Modal = {
+    show(id) { var el = document.getElementById(id); if (el) { el.classList.add('active'); document.body.style.overflow = 'hidden'; } },
+    hide(id) { var el = document.getElementById(id); if (el) { el.classList.remove('active'); document.body.style.overflow = ''; } }
+  };
+
+  // Toast
+  const Toast = {
+    container: document.getElementById('toast-container'),
+    show(msg, type, duration) {
+      duration = duration || 4000;
+      const icons = { success: '✓', error: '✕', warning: '⚠', info: 'ℹ' };
+      const toast = document.createElement('div');
+      toast.className = 'toast toast-' + (type || 'info');
+      toast.innerHTML = '<span style="font-size:16px;font-weight:bold;">' + (icons[type] || icons.info) + '</span><span>' + msg + '</span><button class="toast-close" onclick="this.closest(\'.toast\').remove()">✕</button>';
+      this.container.appendChild(toast);
+      setTimeout(() => { toast.classList.add('toast-exit'); setTimeout(() => toast.remove(), 300); }, duration);
+    },
+    success(m) { this.show(m, 'success'); },
+    error(m) { this.show(m, 'error', 6000); }
+  };
+
+  // Load stats
+  async function loadStats() {
+    try {
+      const resp = await fetch('/api/v1/moderation/stats');
+      const data = await resp.json();
+      document.getElementById('stat-pending').textContent = data.reports?.pending || 0;
+      document.getElementById('stat-public').textContent = data.images?.public || 0;
+      document.getElementById('stat-reported').textContent = data.images?.reported || 0;
+      document.getElementById('stat-hidden').textContent = data.images?.hidden || 0;
+    } catch (err) {
+      // Stats failed silently
+    }
+  }
+
+  // Load reports
+  async function loadReports() {
+    const list = document.getElementById('reports-list');
+    const empty = document.getElementById('reports-empty');
+    const pagination = document.getElementById('pagination');
+
+    list.innerHTML = '<div style="text-align:center;padding:var(--space-8);"><div class="spinner"></div></div>';
+    empty.style.display = 'none';
+
+    try {
+      const endpoint = currentTab === 'pending'
+        ? '/api/v1/moderation/reports/pending'
+        : '/api/v1/moderation/reports';
+      const params = new URLSearchParams({ page: currentPage, per_page: 15 });
+      if (currentTab === 'all') {
+        // No status filter for "all"
+      }
+
+      const resp = await fetch(endpoint + '?' + params.toString());
+      const data = await resp.json();
+      totalPages = data.pages || 1;
+
+      if (!data.reports || data.reports.length === 0) {
+        list.innerHTML = '';
+        empty.style.display = 'flex';
+        pagination.style.display = 'none';
+        return;
+      }
+
+      list.innerHTML = '';
+      data.reports.forEach(report => {
+        const card = document.createElement('div');
+        card.className = 'report-card';
+        card.onclick = () => showReportDetail(report);
+
+        const statusBadge = {
+          pending: '<span class="badge badge-warning">Pending</span>',
+          reviewed: '<span class="badge badge-brand">Reviewed</span>',
+          dismissed: '<span class="badge badge-neutral">Dismissed</span>',
+          actioned: '<span class="badge badge-danger">Hidden</span>',
+        };
+
+        card.innerHTML =
+          '<img class="report-card-thumb" src="/api/v1/images/' + report.image_id + '/thumbnail" alt="Reported image" onerror="this.style.display=\'none\'">' +
+          '<div class="report-card-info">' +
+            '<div class="report-card-reason">' + report.reason + '</div>' +
+            '<div class="report-card-desc">' + (report.description || 'No description provided') + '</div>' +
+            '<div class="report-card-time">Reported by ' + (report.reporter_name || 'User #' + report.reporter_id) + ' · ' + (report.created_at ? report.created_at.substring(0, 16).replace('T', ' ') : '') + '</div>' +
+          '</div>' +
+          '<div class="report-card-status">' + (statusBadge[report.status] || '') + '</div>';
+
+        list.appendChild(card);
+      });
+
+      if (totalPages > 1) {
+        pagination.style.display = 'block';
+        document.getElementById('page-info').textContent = 'Page ' + currentPage + ' of ' + totalPages;
+        document.getElementById('prev-btn').disabled = currentPage <= 1;
+        document.getElementById('next-btn').disabled = currentPage >= totalPages;
+      } else {
+        pagination.style.display = 'none';
+      }
+
+    } catch (err) {
+      list.innerHTML = '';
+      empty.style.display = 'flex';
+    }
+  }
+
+  // Show report detail
+  window.showReportDetail = function(report) {
+    currentReportId = report.id;
+    const body = document.getElementById('report-detail-body');
+    const actions = document.getElementById('report-detail-actions');
+
+    body.innerHTML =
+      '<div style="margin-bottom:var(--space-4);">' +
+        '<img src="/api/v1/images/' + report.image_id + '/file" alt="Reported image" style="width:100%;border-radius:var(--radius-lg);background:var(--bg-tertiary);max-height:300px;object-fit:contain;">' +
+      '</div>' +
+      '<div style="margin-bottom:var(--space-3);"><strong>Reason:</strong> ' + report.reason + '</div>' +
+      '<div style="margin-bottom:var(--space-3);"><strong>Description:</strong> ' + (report.description || 'None') + '</div>' +
+      '<div style="margin-bottom:var(--space-3);"><strong>Reporter:</strong> ' + (report.reporter_name || 'User #' + report.reporter_id) + '</div>' +
+      '<div style="margin-bottom:var(--space-3);"><strong>Reported:</strong> ' + (report.created_at || 'Unknown') + '</div>' +
+      '<div style="margin-bottom:var(--space-3);"><strong>Status:</strong> ' + report.status + '</div>';
+
+    if (report.status === 'pending') {
+      actions.style.display = 'flex';
+    } else {
+      actions.style.display = 'none';
+    }
+
+    Modal.show('report-detail-modal');
+  };
+
+  // Action on report
+  window.actionReport = async function(action) {
+    if (!currentReportId) return;
+    try {
+      const resp = await fetch('/api/v1/moderation/reports/' + currentReportId + '/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: action })
+      });
+      if (!resp.ok) throw new Error('Failed');
+      Modal.hide('report-detail-modal');
+      Toast.success('Report ' + action + ' successfully');
+      loadReports();
+      loadStats();
+    } catch (err) {
+      Toast.error('Failed to take action');
+    }
+  };
+
+  // Tab switch
+  window.switchTab = function(tab, el) {
+    currentTab = tab;
+    currentPage = 1;
+    document.querySelectorAll('.tabs .tab').forEach(t => t.classList.remove('active'));
+    if (el) el.classList.add('active');
+    loadReports();
+  };
+
+  // Pagination
+  window.changePage = function(delta) {
+    currentPage = Math.max(1, Math.min(totalPages, currentPage + delta));
+    loadReports();
+  };
+
+  // Close modal on overlay click
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('modal-overlay') && e.target.classList.contains('active')) {
+      e.target.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+  });
+
+  // Init
+  loadStats();
+  loadReports();
+})();
+</script>
+{% endblock %}

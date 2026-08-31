@@ -1,0 +1,729 @@
+{% extends "base.html" %}
+{% block title %}Gallery — AI Studio{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/gallery.css') }}">
+{% endblock %}
+
+{% block header_left %}
+<h4 style="font-size:var(--text-base);font-weight:var(--weight-semibold);">Gallery</h4>
+{% endblock %}
+
+{% block content %}
+<div class="gallery-page">
+  <!-- Header -->
+  <div class="gallery-header">
+    <div class="gallery-header-left">
+      <h3>Gallery</h3>
+      <span class="gallery-count" id="gallery-count">Loading...</span>
+    </div>
+    <div class="gallery-header-right">
+      <!-- Search -->
+      <div class="gallery-search">
+        <svg class="gallery-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="gallery-search" placeholder="Search by title, prompt, or tag..." autocomplete="off">
+        <button class="gallery-search-clear" id="search-clear" style="display:none;" onclick="clearSearch()">✕</button>
+      </div>
+
+      <!-- Sort -->
+      <div class="gallery-sort">
+        <span class="gallery-sort-label">Sort:</span>
+        <select id="gallery-sort" class="gallery-filter-select" onchange="loadGallery()">
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+          <option value="az">A → Z</option>
+          <option value="favorite">Favorites First</option>
+        </select>
+      </div>
+
+      <!-- View Toggle -->
+      <div class="flex gap-1">
+        <button class="btn btn-ghost btn-sm" id="view-normal" onclick="setView('normal')" title="Normal view">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        </button>
+        <button class="btn btn-ghost btn-sm" id="view-large" onclick="setView('large')" title="Large view">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="gallery-filter-bar" id="filter-bar">
+    <div class="gallery-filter-group">
+      <button class="gallery-filter-chip active" data-filter="all" onclick="setFilter('all')">All</button>
+      <button class="gallery-filter-chip" data-filter="favorites" onclick="setFilter('favorites')">❤️ Favorites</button>
+    </div>
+
+    <div class="gallery-filter-divider"></div>
+
+    <div class="gallery-filter-group">
+      <select id="filter-style" class="gallery-filter-select" onchange="loadGallery()">
+        <option value="">All Styles</option>
+      </select>
+      <select id="filter-model" class="gallery-filter-select" onchange="loadGallery()">
+        <option value="">All Models</option>
+      </select>
+      <select id="filter-collection" class="gallery-filter-select" onchange="loadGallery()">
+        <option value="">All Collections</option>
+      </select>
+      <select id="filter-tag" class="gallery-filter-select" onchange="loadGallery()">
+        <option value="">All Tags</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Gallery Grid -->
+  <div class="gallery-grid" id="gallery-grid"></div>
+
+  <!-- Empty State -->
+  <div class="empty-state" id="gallery-empty" style="display:none;">
+    <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+    </svg>
+    <h4 class="empty-state-title" id="empty-title">Your gallery is empty</h4>
+    <p class="empty-state-description" id="empty-desc">Generate your first image and it will appear here.</p>
+    <a href="/generate" class="btn btn-primary">Create Your First Image</a>
+  </div>
+
+  <!-- Loading State -->
+  <div class="empty-state" id="gallery-loading" style="display:none;">
+    <div class="spinner spinner-lg" style="margin-bottom:var(--space-4);"></div>
+    <p class="text-sm text-muted">Loading gallery...</p>
+  </div>
+
+  <!-- Pagination -->
+  <div class="flex justify-center mt-8" id="gallery-pagination" style="display:none;">
+    <div class="flex gap-2">
+      <button class="btn btn-secondary btn-sm" id="prev-page" onclick="changePage(-1)">← Previous</button>
+      <span class="text-sm text-muted flex items-center" id="page-info">Page 1 of 1</span>
+      <button class="btn btn-secondary btn-sm" id="next-page" onclick="changePage(1)">Next →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bulk Action Bar -->
+<div class="gallery-bulk-bar" id="bulk-bar">
+  <div class="gallery-bulk-bar-left">
+    <label class="gallery-bulk-select-all">
+      <input type="checkbox" id="select-all-checkbox" onchange="toggleSelectAll()">
+      <span><span id="selected-count">0</span> selected</span>
+    </label>
+    <button class="gallery-bulk-btn" onclick="clearSelection()">Clear</button>
+  </div>
+  <div class="gallery-bulk-bar-right">
+    <button class="gallery-bulk-btn" onclick="bulkFavorite(true)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      Favorite
+    </button>
+    <button class="gallery-bulk-btn" onclick="bulkUnfavorite()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      Unfavorite
+    </button>
+    <button class="gallery-bulk-btn" onclick="showBulkCollectionModal()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      Add to Collection
+    </button>
+    <button class="gallery-bulk-btn" onclick="showBulkTagModal()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+      Add Tags
+    </button>
+    <button class="gallery-bulk-btn danger" onclick="confirmBulkDelete()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+      Delete
+    </button>
+  </div>
+</div>
+
+<!-- Confirm Delete Dialog -->
+<div class="gallery-confirm-overlay" id="confirm-delete-overlay">
+  <div class="gallery-confirm-dialog">
+    <div class="gallery-confirm-icon">🗑️</div>
+    <h4 class="gallery-confirm-title">Delete Images?</h4>
+    <p class="gallery-confirm-text" id="confirm-delete-text">This will permanently delete the selected images. This action cannot be undone.</p>
+    <div class="gallery-confirm-actions">
+      <button class="btn btn-secondary" onclick="hideConfirmDelete()">Cancel</button>
+      <button class="btn btn-danger" onclick="executeBulkDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add to Collection Dialog -->
+<div class="gallery-confirm-overlay" id="collection-dialog-overlay">
+  <div class="gallery-confirm-dialog">
+    <div class="gallery-confirm-icon" style="background:var(--brand-100);color:var(--brand-600);">📁</div>
+    <h4 class="gallery-confirm-title">Add to Collection</h4>
+    <p class="gallery-confirm-text">Select a collection to add the selected images to:</p>
+    <div id="collection-dialog-list" style="max-height:300px;overflow-y:auto;margin-bottom:var(--space-4);"></div>
+    <div class="gallery-confirm-actions">
+      <button class="btn btn-secondary" onclick="hideCollectionDialog()">Cancel</button>
+      <button class="btn btn-secondary" onclick="showNewCollectionInline()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New
+      </button>
+    </div>
+    <div id="new-collection-form" style="display:none;margin-top:var(--space-4);padding-top:var(--space-4);border-top:1px solid var(--border-default);">
+      <div class="form-group mb-3">
+        <input type="text" id="new-collection-name" class="input" placeholder="Collection name">
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="createAndAddToCollection()" style="width:100%;">Create & Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Tags Dialog -->
+<div class="gallery-confirm-overlay" id="tag-dialog-overlay">
+  <div class="gallery-confirm-dialog">
+    <div class="gallery-confirm-icon" style="background:var(--accent-100);color:var(--accent-600);">🏷️</div>
+    <h4 class="gallery-confirm-title">Add Tags</h4>
+    <p class="gallery-confirm-text">Add tags to the selected images:</p>
+    <div class="form-group" style="margin-bottom:var(--space-4);">
+      <input type="text" id="bulk-tag-input" class="input" placeholder="Enter tags separated by commas...">
+      <div class="form-hint">Example: landscape, sunset, photo</div>
+    </div>
+    <div class="gallery-confirm-actions">
+      <button class="btn btn-secondary" onclick="hideTagDialog()">Cancel</button>
+      <button class="btn btn-primary" onclick="executeBulkTag()">Add Tags</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ============================================================
+   GALLERY APPLICATION
+   ============================================================ */
+(function() {
+  'use strict';
+
+  // ---- State ----
+  const state = {
+    images: [],
+    selectedIds: new Set(),
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    perPage: 20,
+    search: '',
+    sort: 'newest',
+    filter: 'all',
+    style: '',
+    model: '',
+    collectionId: null,
+    tagId: null,
+    view: 'normal',
+    filters: {},
+    searchTimeout: null,
+  };
+
+  // ---- Init ----
+  document.addEventListener('DOMContentLoaded', () => {
+    loadGallery();
+    setupSearch();
+    setupKeyboard();
+  });
+
+  // ---- Load Gallery ----
+  window.loadGallery = async function() {
+    const grid = document.getElementById('gallery-grid');
+    const empty = document.getElementById('gallery-empty');
+    const loading = document.getElementById('gallery-loading');
+
+    grid.innerHTML = '';
+    empty.style.display = 'none';
+    loading.style.display = 'flex';
+
+    const params = new URLSearchParams();
+    params.set('page', state.currentPage);
+    params.set('per_page', state.perPage);
+    params.set('sort', document.getElementById('gallery-sort').value);
+
+    if (state.search) params.set('search', state.search);
+    if (state.filter === 'favorites') params.set('favorite', 'true');
+    if (state.style) params.set('style', state.style);
+    if (state.model) params.set('model', state.model);
+    if (state.collectionId) params.set('collection_id', state.collectionId);
+    if (state.tagId) params.set('tag_id', state.tagId);
+
+    try {
+      const resp = await fetch(`/api/v1/gallery?${params}`);
+      if (!resp.ok) throw new Error('Failed to load gallery');
+      const data = await resp.json();
+
+      state.images = data.images;
+      state.totalPages = data.pages;
+      state.totalItems = data.total;
+      state.currentPage = data.page;
+      state.filters = data.filters;
+
+      loading.style.display = 'none';
+
+      if (state.images.length === 0) {
+        empty.style.display = 'flex';
+        if (state.search || state.filter !== 'all' || state.style || state.model) {
+          document.getElementById('empty-title').textContent = 'No images found';
+          document.getElementById('empty-desc').textContent = 'Try adjusting your search or filters.';
+        } else {
+          document.getElementById('empty-title').textContent = 'Your gallery is empty';
+          document.getElementById('empty-desc').textContent = 'Generate your first image and it will appear here.';
+        }
+      } else {
+        renderGallery();
+      }
+
+      updateFilterOptions();
+      updatePagination();
+      updateCount();
+    } catch (err) {
+      loading.style.display = 'none';
+      Toast.error('Failed to load gallery');
+    }
+  };
+
+  // ---- Render Gallery ----
+  function renderGallery() {
+    const grid = document.getElementById('gallery-grid');
+    grid.innerHTML = '';
+
+    state.images.forEach(img => {
+      const card = document.createElement('div');
+      card.className = `gallery-card ${state.selectedIds.has(img.id) ? 'selected' : ''}`;
+      card.dataset.id = img.id;
+
+      const tags = (img.tags || []).slice(0, 3).map(t =>
+        `<span class="gallery-card-tag">${escapeHtml(t.name)}</span>`
+      ).join('');
+
+      const date = img.created_at ? new Date(img.created_at).toLocaleDateString() : '';
+
+      card.innerHTML = `
+        <div class="gallery-card-checkbox" onclick="event.stopPropagation(); toggleSelect(${img.id})"></div>
+        <div class="gallery-card-image-wrapper">
+          <img class="gallery-card-image" src="${img.thumb_url || img.url}" alt="${escapeHtml(img.title || img.prompt || 'Image')}" loading="lazy">
+          <button class="gallery-card-favorite ${img.is_favorite ? 'favorited' : ''}" onclick="event.stopPropagation(); toggleFavorite(${img.id})" title="Toggle favorite">
+            <svg viewBox="0 0 24 24" fill="${img.is_favorite ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </button>
+          <div class="gallery-card-actions">
+            <button class="gallery-card-action" onclick="event.stopPropagation(); openImage(${img.id})" title="Open">Open</button>
+            <button class="gallery-card-action" onclick="event.stopPropagation(); downloadImage(${img.id})" title="Download">Download</button>
+            <button class="gallery-card-action" onclick="event.stopPropagation(); openEditor(${img.id})" title="Edit">Edit</button>
+          </div>
+        </div>
+        <div class="gallery-card-info">
+          <div class="gallery-card-title">${escapeHtml(img.title || img.prompt || img.filename)}</div>
+          <div class="gallery-card-meta">
+            <span>${date}</span>
+            ${img.style ? `<span>• ${escapeHtml(img.style)}</span>` : ''}
+          </div>
+          ${tags ? `<div class="gallery-card-tags">${tags}</div>` : ''}
+        </div>
+      `;
+
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('.gallery-card-action') || e.target.closest('.gallery-card-favorite') || e.target.closest('.gallery-card-checkbox')) return;
+        openImage(img.id);
+      });
+
+      grid.appendChild(card);
+    });
+  }
+
+  // ---- Search ----
+  function setupSearch() {
+    const input = document.getElementById('gallery-search');
+    const clearBtn = document.getElementById('search-clear');
+
+    input.addEventListener('input', () => {
+      clearTimeout(state.searchTimeout);
+      state.search = input.value.trim();
+      clearBtn.style.display = state.search ? 'flex' : 'none';
+      state.searchTimeout = setTimeout(() => {
+        state.currentPage = 1;
+        loadGallery();
+      }, 300);
+    });
+  }
+
+  window.clearSearch = function() {
+    document.getElementById('gallery-search').value = '';
+    document.getElementById('search-clear').style.display = 'none';
+    state.search = '';
+    state.currentPage = 1;
+    loadGallery();
+  };
+
+  // ---- Filters ----
+  window.setFilter = function(filter) {
+    state.filter = filter;
+    state.currentPage = 1;
+
+    document.querySelectorAll('.gallery-filter-chip').forEach(c => c.classList.remove('active'));
+    document.querySelector(`[data-filter="${filter}"]`)?.classList.add('active');
+
+    loadGallery();
+  };
+
+  function updateFilterOptions() {
+    const f = state.filters;
+
+    // Styles
+    const styleSelect = document.getElementById('filter-style');
+    const currentStyle = state.style;
+    styleSelect.innerHTML = '<option value="">All Styles</option>';
+    (f.styles || []).forEach(s => {
+      styleSelect.innerHTML += `<option value="${escapeHtml(s)}" ${s === currentStyle ? 'selected' : ''}>${escapeHtml(s)}</option>`;
+    });
+
+    // Models
+    const modelSelect = document.getElementById('filter-model');
+    const currentModel = state.model;
+    modelSelect.innerHTML = '<option value="">All Models</option>';
+    (f.models || []).forEach(m => {
+      modelSelect.innerHTML += `<option value="${escapeHtml(m)}" ${m === currentModel ? 'selected' : ''}>${escapeHtml(m)}</option>`;
+    });
+
+    // Collections
+    const collSelect = document.getElementById('filter-collection');
+    collSelect.innerHTML = '<option value="">All Collections</option>';
+    (f.collections || []).forEach(c => {
+      collSelect.innerHTML += `<option value="${c.id}" ${c.id === state.collectionId ? 'selected' : ''}>${escapeHtml(c.name)} (${c.image_count})</option>`;
+    });
+    collSelect.onchange = () => {
+      state.collectionId = collSelect.value ? parseInt(collSelect.value) : null;
+      state.currentPage = 1;
+      loadGallery();
+    };
+
+    // Tags
+    const tagSelect = document.getElementById('filter-tag');
+    tagSelect.innerHTML = '<option value="">All Tags</option>';
+    (f.tags || []).forEach(t => {
+      tagSelect.innerHTML += `<option value="${t.id}" ${t.id === state.tagId ? 'selected' : ''}>${escapeHtml(t.name)} (${t.image_count})</option>`;
+    });
+    tagSelect.onchange = () => {
+      state.tagId = tagSelect.value ? parseInt(tagSelect.value) : null;
+      state.currentPage = 1;
+      loadGallery();
+    };
+
+    // Style/Model change handlers
+    styleSelect.onchange = () => {
+      state.style = styleSelect.value;
+      state.currentPage = 1;
+      loadGallery();
+    };
+    modelSelect.onchange = () => {
+      state.model = modelSelect.value;
+      state.currentPage = 1;
+      loadGallery();
+    };
+  }
+
+  // ---- View ----
+  window.setView = function(view) {
+    state.view = view;
+    const grid = document.getElementById('gallery-grid');
+    grid.className = 'gallery-grid';
+    if (view === 'large') grid.classList.add('view-large');
+    if (view === 'small') grid.classList.add('view-small');
+
+    document.getElementById('view-normal')?.classList.toggle('active', view === 'normal');
+    document.getElementById('view-large')?.classList.toggle('active', view === 'large');
+  };
+
+  // ---- Selection ----
+  window.toggleSelect = function(id) {
+    if (state.selectedIds.has(id)) {
+      state.selectedIds.delete(id);
+    } else {
+      state.selectedIds.add(id);
+    }
+    updateSelectionUI();
+  };
+
+  window.toggleSelectAll = function() {
+    const selectAll = document.getElementById('select-all-checkbox').checked;
+    if (selectAll) {
+      state.images.forEach(img => state.selectedIds.add(img.id));
+    } else {
+      state.selectedIds.clear();
+    }
+    updateSelectionUI();
+  };
+
+  window.clearSelection = function() {
+    state.selectedIds.clear();
+    document.getElementById('select-all-checkbox').checked = false;
+    updateSelectionUI();
+  };
+
+  function updateSelectionUI() {
+    const count = state.selectedIds.size;
+    document.getElementById('selected-count').textContent = count;
+
+    const bar = document.getElementById('bulk-bar');
+    bar.classList.toggle('active', count > 0);
+
+    // Update card selection states
+    document.querySelectorAll('.gallery-card').forEach(card => {
+      const id = parseInt(card.dataset.id);
+      card.classList.toggle('selected', state.selectedIds.has(id));
+    });
+  }
+
+  // ---- Favorite ----
+  window.toggleFavorite = async function(id) {
+    try {
+      const resp = await fetch(`/api/v1/images/${id}/favorite`, { method: 'POST' });
+      if (!resp.ok) throw new Error('Failed');
+      const data = await resp.json();
+
+      // Update state
+      const img = state.images.find(i => i.id === id);
+      if (img) img.is_favorite = data.is_favorite;
+
+      // Update card UI
+      const card = document.querySelector(`.gallery-card[data-id="${id}"]`);
+      if (card) {
+        const btn = card.querySelector('.gallery-card-favorite');
+        btn.classList.toggle('favorited', data.is_favorite);
+        btn.querySelector('svg').setAttribute('fill', data.is_favorite ? 'currentColor' : 'none');
+      }
+
+      Toast.success(data.is_favorite ? 'Added to favorites' : 'Removed from favorites');
+    } catch (err) {
+      Toast.error('Failed to update favorite');
+    }
+  };
+
+  // ---- Bulk Operations ----
+  window.bulkFavorite = async function(fav) {
+    const ids = Array.from(state.selectedIds);
+    if (!ids.length) return;
+
+    try {
+      const resp = await fetch('/api/v1/gallery/bulk/favorite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_ids: ids, favorite: fav }),
+      });
+      if (!resp.ok) throw new Error('Failed');
+      Toast.success(`Updated ${ids.length} images`);
+      clearSelection();
+      loadGallery();
+    } catch (err) {
+      Toast.error('Bulk favorite failed');
+    }
+  };
+
+  window.bulkUnfavorite = function() { bulkFavorite(false); };
+
+  window.confirmBulkDelete = function() {
+    const count = state.selectedIds.size;
+    document.getElementById('confirm-delete-text').textContent =
+      `This will delete ${count} image${count > 1 ? 's' : ''}. This action cannot be undone.`;
+    document.getElementById('confirm-delete-overlay').classList.add('active');
+  };
+
+  window.hideConfirmDelete = function() {
+    document.getElementById('confirm-delete-overlay').classList.remove('active');
+  };
+
+  window.executeBulkDelete = async function() {
+    const ids = Array.from(state.selectedIds);
+    if (!ids.length) return;
+
+    try {
+      const resp = await fetch('/api/v1/gallery/bulk/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_ids: ids }),
+      });
+      if (!resp.ok) throw new Error('Failed');
+      Toast.success(`Deleted ${ids.length} image${ids.length > 1 ? 's' : ''}`);
+      hideConfirmDelete();
+      clearSelection();
+      loadGallery();
+    } catch (err) {
+      Toast.error('Bulk delete failed');
+    }
+  };
+
+  // ---- Collection Dialog ----
+  window.showBulkCollectionModal = async function() {
+    const overlay = document.getElementById('collection-dialog-overlay');
+    const list = document.getElementById('collection-dialog-list');
+    document.getElementById('new-collection-form').style.display = 'none';
+
+    try {
+      const resp = await fetch('/api/v1/collections');
+      const data = await resp.json();
+
+      if (data.collections.length === 0) {
+        list.innerHTML = '<p class="text-sm text-muted text-center" style="padding:var(--space-4);">No collections yet. Create one first.</p>';
+      } else {
+        list.innerHTML = data.collections.map(c => `
+          <button class="btn btn-ghost" style="width:100%;justify-content:flex-start;padding:var(--space-2) var(--space-3);margin-bottom:var(--space-1);"
+            onclick="addToCollection(${c.id})">
+            📁 ${escapeHtml(c.name)} <span class="text-xs text-muted" style="margin-left:auto;">${c.image_count} images</span>
+          </button>
+        `).join('');
+      }
+    } catch (err) {
+      list.innerHTML = '<p class="text-sm text-muted text-center">Failed to load collections</p>';
+    }
+
+    overlay.classList.add('active');
+  };
+
+  window.hideCollectionDialog = function() {
+    document.getElementById('collection-dialog-overlay').classList.remove('active');
+  };
+
+  window.showNewCollectionInline = function() {
+    document.getElementById('new-collection-form').style.display = 'block';
+    document.getElementById('new-collection-name').focus();
+  };
+
+  window.addToCollection = async function(collectionId) {
+    const ids = Array.from(state.selectedIds);
+    try {
+      const resp = await fetch('/api/v1/gallery/bulk/collection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_ids: ids, collection_id: collectionId }),
+      });
+      if (!resp.ok) throw new Error('Failed');
+      Toast.success(`Added to collection`);
+      hideCollectionDialog();
+      clearSelection();
+    } catch (err) {
+      Toast.error('Failed to add to collection');
+    }
+  };
+
+  window.createAndAddToCollection = async function() {
+    const name = document.getElementById('new-collection-name').value.trim();
+    if (!name) { Toast.warning('Enter a collection name'); return; }
+
+    try {
+      const resp = await fetch('/api/v1/collections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      if (!resp.ok) throw new Error('Failed');
+      const data = await resp.json();
+      await addToCollection(data.collection.id);
+    } catch (err) {
+      Toast.error('Failed to create collection');
+    }
+  };
+
+  // ---- Tag Dialog ----
+  window.showBulkTagModal = function() {
+    document.getElementById('bulk-tag-input').value = '';
+    document.getElementById('tag-dialog-overlay').classList.add('active');
+    document.getElementById('bulk-tag-input').focus();
+  };
+
+  window.hideTagDialog = function() {
+    document.getElementById('tag-dialog-overlay').classList.remove('active');
+  };
+
+  window.executeBulkTag = async function() {
+    const input = document.getElementById('bulk-tag-input').value.trim();
+    if (!input) { Toast.warning('Enter at least one tag'); return; }
+
+    const tags = input.split(',').map(t => t.trim()).filter(Boolean);
+    const ids = Array.from(state.selectedIds);
+
+    try {
+      const resp = await fetch('/api/v1/gallery/bulk/tags', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_ids: ids, tags }),
+      });
+      if (!resp.ok) throw new Error('Failed');
+      Toast.success(`Tags added to ${ids.length} images`);
+      hideTagDialog();
+      clearSelection();
+      loadGallery();
+    } catch (err) {
+      Toast.error('Failed to add tags');
+    }
+  };
+
+  // ---- Pagination ----
+  window.changePage = function(delta) {
+    state.currentPage = Math.max(1, Math.min(state.totalPages, state.currentPage + delta));
+    loadGallery();
+  };
+
+  function updatePagination() {
+    const pagination = document.getElementById('gallery-pagination');
+    if (state.totalPages <= 1) {
+      pagination.style.display = 'none';
+      return;
+    }
+    pagination.style.display = 'flex';
+    document.getElementById('page-info').textContent = `Page ${state.currentPage} of ${state.totalPages}`;
+    document.getElementById('prev-page').disabled = state.currentPage <= 1;
+    document.getElementById('next-page').disabled = state.currentPage >= state.totalPages;
+  }
+
+  function updateCount() {
+    const el = document.getElementById('gallery-count');
+    el.textContent = `${state.totalItems} image${state.totalItems !== 1 ? 's' : ''}`;
+  }
+
+  // ---- Navigation ----
+  window.openImage = function(id) {
+    window.location.href = `/images/${id}`;
+  };
+
+  window.downloadImage = function(id) {
+    window.location.href = `/api/v1/images/${id}/download`;
+  };
+
+  window.openEditor = function(id) {
+    window.location.href = `/editor?id=${id}`;
+  };
+
+  // ---- Keyboard ----
+  function setupKeyboard() {
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (state.selectedIds.size > 0) {
+          clearSelection();
+        }
+        hideConfirmDelete();
+        hideCollectionDialog();
+        hideTagDialog();
+      }
+
+      // Ctrl+A to select all
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a' && !e.target.closest('input, textarea, select')) {
+        e.preventDefault();
+        state.images.forEach(img => state.selectedIds.add(img.id));
+        document.getElementById('select-all-checkbox').checked = true;
+        updateSelectionUI();
+      }
+    });
+  }
+
+  // ---- Helpers ----
+  function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // Expose globally
+  window.escapeHtml = escapeHtml;
+
+})();
+</script>
+{% endblock %}

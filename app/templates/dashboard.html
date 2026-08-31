@@ -1,0 +1,338 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — AI Studio{% endblock %}
+
+{% block content %}
+<!-- Welcome Section -->
+<div style="margin-bottom:var(--space-8);">
+  <div class="flex items-center justify-between flex-wrap gap-4">
+    <div>
+      <h2 style="margin-bottom:var(--space-1);">Welcome back, {{ user.username }} 👋</h2>
+      <p class="text-muted">Here's what's happening with your creative workspace.</p>
+    </div>
+    <a href="/generate" class="btn btn-primary btn-lg">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Create Image
+    </a>
+  </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="grid grid-4" style="margin-bottom:var(--space-8);">
+  <div class="card" style="padding:var(--space-5);">
+    <div class="flex items-center justify-between" style="margin-bottom:var(--space-3);">
+      <span class="text-sm text-muted">Total Generations</span>
+      <div style="width:36px;height:36px;border-radius:var(--radius-md);background:var(--brand-50);color:var(--brand-600);display:flex;align-items:center;justify-content:center;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+    </div>
+    <div style="font-size:var(--text-3xl);font-weight:var(--weight-bold);">{{ total_generations }}</div>
+  </div>
+
+  <div class="card" style="padding:var(--space-5);">
+    <div class="flex items-center justify-between" style="margin-bottom:var(--space-3);">
+      <span class="text-sm text-muted">Total Images</span>
+      <div style="width:36px;height:36px;border-radius:var(--radius-md);background:rgba(64,192,87,0.1);color:var(--success-600);display:flex;align-items:center;justify-content:center;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      </div>
+    </div>
+    <div style="font-size:var(--text-3xl);font-weight:var(--weight-bold);">{{ total_images }}</div>
+  </div>
+
+  <div class="card" style="padding:var(--space-5);">
+    <div class="flex items-center justify-between" style="margin-bottom:var(--space-3);">
+      <span class="text-sm text-muted">This Month</span>
+      <div style="width:36px;height:36px;border-radius:var(--radius-md);background:rgba(132,94,247,0.1);color:var(--accent-600);display:flex;align-items:center;justify-content:center;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      </div>
+    </div>
+    <div style="font-size:var(--text-3xl);font-weight:var(--weight-bold);">{{ monthly_generations }}</div>
+  </div>
+
+  <div class="card" style="padding:var(--space-5);">
+    <div class="flex items-center justify-between" style="margin-bottom:var(--space-3);">
+      <span class="text-sm text-muted">Failed</span>
+      <div style="width:36px;height:36px;border-radius:var(--radius-md);{% if failed_generations > 0 %}background:rgba(250,82,82,0.1);color:var(--danger-600);{% else %}background:var(--bg-tertiary);color:var(--text-tertiary);{% endif %}display:flex;align-items:center;justify-content:center;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+      </div>
+    </div>
+    <div style="font-size:var(--text-3xl);font-weight:var(--weight-bold);">{{ failed_generations }}</div>
+  </div>
+</div>
+
+<!-- Main Content Grid -->
+<div style="display:grid;grid-template-columns:1fr 360px;gap:var(--space-6);">
+
+  <!-- Left Column -->
+  <div>
+    <!-- Recent Generations -->
+    <div class="card" style="margin-bottom:var(--space-6);">
+      <div class="card-header">
+        <h4 class="card-title">Recent Generations</h4>
+        {% if recent_generations %}
+        <a href="/history" class="btn btn-ghost btn-sm">View All</a>
+        {% endif %}
+      </div>
+
+      {% if recent_generations %}
+      <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:var(--space-3);">
+        {% for gen in recent_generations %}
+        {% set thumb = gen.images.first() %}
+        <div class="image-card tilt-card" style="border-radius:var(--radius-md);">
+          <div class="tilt-card__inner" style="border-radius:var(--radius-md);">
+          {% if thumb %}
+          <div class="image-card-image media-shimmer" style="aspect-ratio:1;">
+            <img src="/api/v1/images/{{ thumb.id }}/thumbnail" alt="{{ gen.prompt[:60] }}"
+                 loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;"
+                 onload="this.parentElement.classList.remove('media-shimmer')">
+          </div>
+          {% else %}
+          <div class="image-card-image" style="aspect-ratio:1;background:linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary));display:flex;align-items:center;justify-content:center;font-size:var(--text-xs);color:var(--text-tertiary);">
+            <div style="text-align:center;padding:var(--space-3);">
+              <div style="font-size:24px;margin-bottom:2px;">🖼️</div>
+              <span class="badge badge-{% if gen.status == 'completed' %}success{% elif gen.status == 'failed' %}danger{% else %}neutral{% endif %}" style="margin-top:4px;">{{ gen.status }}</span>
+            </div>
+          </div>
+          {% endif %}
+          <div class="image-card-info">
+            <p style="font-size:var(--text-xs);">{{ gen.prompt[:50] }}{% if gen.prompt|length > 50 %}...{% endif %}</p>
+          </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state" style="padding:var(--space-8) var(--space-4);">
+        <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:48px;height:48px;">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+        </svg>
+        <h4 class="empty-state-title" style="font-size:var(--text-base);">No generations yet</h4>
+        <p class="empty-state-description">Your recent AI-generated images will appear here.</p>
+        <a href="/generate" class="btn btn-primary btn-sm">Create Your First Image</a>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Activity Chart -->
+    <div class="card reveal" style="margin-bottom:var(--space-6);">
+      <div class="card-header">
+        <h4 class="card-title">Activity — last 14 days</h4>
+      </div>
+      {% if total_generations > 0 %}
+      <div style="height:220px;">
+        <canvas id="activity-chart" role="img" aria-label="Generations over the last 14 days"></canvas>
+      </div>
+      <script id="activity-chart-data" type="application/json">{{ activity_chart|tojson }}</script>
+      <script src="{{ url_for('static', filename='js/vendor/chart.umd.js') }}"></script>
+      <script>
+        (function () {
+          var dataEl = document.getElementById('activity-chart-data');
+          var canvas = document.getElementById('activity-chart');
+          if (!dataEl || !canvas || typeof Chart === 'undefined') return;
+          var data = JSON.parse(dataEl.textContent);
+          var styles = getComputedStyle(document.documentElement);
+          var brand = styles.getPropertyValue('--brand-500').trim() || '#4c6ef5';
+          var success = styles.getPropertyValue('--success-500').trim() || '#40c057';
+          var gridColor = styles.getPropertyValue('--border-default').trim() || '#e9ecef';
+          var textColor = styles.getPropertyValue('--text-tertiary').trim() || '#868e96';
+
+          new Chart(canvas.getContext('2d'), {
+            type: 'line',
+            data: {
+              labels: data.labels,
+              datasets: [
+                {
+                  label: 'Total',
+                  data: data.total,
+                  borderColor: brand,
+                  backgroundColor: brand + '22',
+                  tension: 0.35,
+                  fill: true,
+                  pointRadius: 0,
+                  borderWidth: 2,
+                },
+                {
+                  label: 'Completed',
+                  data: data.completed,
+                  borderColor: success,
+                  backgroundColor: 'transparent',
+                  tension: 0.35,
+                  fill: false,
+                  pointRadius: 0,
+                  borderWidth: 2,
+                  borderDash: [4, 3],
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: { mode: 'index', intersect: false },
+              plugins: {
+                legend: { display: true, labels: { color: textColor, boxWidth: 12, font: { size: 11 } } },
+              },
+              scales: {
+                x: { ticks: { color: textColor, font: { size: 10 } }, grid: { display: false } },
+                y: { beginAtZero: true, ticks: { color: textColor, precision: 0, font: { size: 10 } }, grid: { color: gridColor } },
+              },
+            },
+          });
+        })();
+      </script>
+      {% else %}
+      <div class="empty-state" style="padding:var(--space-6) var(--space-4);">
+        <p class="empty-state-description">Your generation activity will show up here once you create a few images.</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card">
+      <div class="card-header">
+        <h4 class="card-title">Quick Actions</h4>
+      </div>
+      <div class="grid grid-2" style="gap:var(--space-3);">
+        <a href="/generate" class="card card-interactive" style="padding:var(--space-4);text-decoration:none;">
+          <div class="flex items-center gap-3">
+            <div style="width:40px;height:40px;border-radius:var(--radius-md);background:var(--brand-50);color:var(--brand-600);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </div>
+            <div>
+              <div class="font-medium text-sm">Create Image</div>
+              <div class="text-xs text-muted">Generate with AI</div>
+            </div>
+          </div>
+        </a>
+        <a href="/generate" class="card card-interactive" style="padding:var(--space-4);text-decoration:none;">
+          <div class="flex items-center gap-3">
+            <div style="width:40px;height:40px;border-radius:var(--radius-md);background:rgba(132,94,247,0.1);color:var(--accent-600);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </div>
+            <div>
+              <div class="font-medium text-sm">Upload Reference</div>
+              <div class="text-xs text-muted">Use as inspiration</div>
+            </div>
+          </div>
+        </a>
+        <a href="/gallery" class="card card-interactive" style="padding:var(--space-4);text-decoration:none;">
+          <div class="flex items-center gap-3">
+            <div style="width:40px;height:40px;border-radius:var(--radius-md);background:rgba(64,192,87,0.1);color:var(--success-600);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            </div>
+            <div>
+              <div class="font-medium text-sm">Open Gallery</div>
+              <div class="text-xs text-muted">Browse your images</div>
+            </div>
+          </div>
+        </a>
+        <a href="/collections" class="card card-interactive" style="padding:var(--space-4);text-decoration:none;">
+          <div class="flex items-center gap-3">
+            <div style="width:40px;height:40px;border-radius:var(--radius-md);background:rgba(252,196,25,0.1);color:var(--warning-600);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            </div>
+            <div>
+              <div class="font-medium text-sm">New Collection</div>
+              <div class="text-xs text-muted">Organize images</div>
+            </div>
+          </div>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Column -->
+  <div>
+    <!-- Profile Card -->
+    <div class="card" style="margin-bottom:var(--space-6);">
+      <div class="flex items-center gap-4" style="margin-bottom:var(--space-4);">
+        <div class="avatar avatar-lg" data-avatar-seed="{{ user.username }}">{{ user.username[0]|upper }}</div>
+        <div>
+          <div class="font-bold">{{ user.username }}</div>
+          <div class="text-sm text-muted">{{ user.email }}</div>
+          <div class="badge badge-brand" style="margin-top:var(--space-1);">{{ 'Admin' if user.is_admin else 'Free Plan' }}</div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="flex gap-3">
+        <a href="/profile" class="btn btn-secondary btn-sm" style="flex:1;">Edit Profile</a>
+        <a href="/settings" class="btn btn-ghost btn-sm" style="flex:1;">Settings</a>
+      </div>
+    </div>
+
+    <!-- Prompt Suggestions -->
+    <div class="card reveal" style="margin-bottom:var(--space-6);">
+      <div class="card-header">
+        <h4 class="card-title">Try These Prompts</h4>
+      </div>
+      <div class="prompt-suggestion-list">
+        <button class="prompt-suggestion" onclick="window.location.href='/generate?prompt=' + encodeURIComponent('A serene mountain landscape at golden hour with dramatic clouds')">
+          <span class="prompt-suggestion-icon">🏔️</span>
+          <span class="prompt-suggestion-text">A serene mountain landscape at golden hour with dramatic clouds</span>
+        </button>
+        <button class="prompt-suggestion" onclick="window.location.href='/generate?prompt=' + encodeURIComponent('Futuristic cyberpunk city with neon lights reflecting on wet streets')">
+          <span class="prompt-suggestion-icon">🌃</span>
+          <span class="prompt-suggestion-text">Futuristic cyberpunk city with neon lights reflecting on wet streets</span>
+        </button>
+        <button class="prompt-suggestion" onclick="window.location.href='/generate?prompt=' + encodeURIComponent('A majestic dragon soaring over an ancient fantasy kingdom')">
+          <span class="prompt-suggestion-icon">🐉</span>
+          <span class="prompt-suggestion-text">A majestic dragon soaring over an ancient fantasy kingdom</span>
+        </button>
+        <button class="prompt-suggestion" onclick="window.location.href='/generate?prompt=' + encodeURIComponent('Abstract fluid art with vibrant complementary colors and organic shapes')">
+          <span class="prompt-suggestion-icon">🎨</span>
+          <span class="prompt-suggestion-text">Abstract fluid art with vibrant complementary colors and organic shapes</span>
+        </button>
+        <button class="prompt-suggestion" onclick="window.location.href='/generate?prompt=' + encodeURIComponent('A cute cat wearing a tiny wizard hat, sitting on a stack of old books')">
+          <span class="prompt-suggestion-icon">🐱</span>
+          <span class="prompt-suggestion-text">A cute cat wearing a tiny wizard hat, sitting on a stack of old books</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Favorites Summary -->
+    <div class="card" style="margin-bottom:var(--space-6);">
+      <div class="card-header">
+        <h4 class="card-title">Favorites</h4>
+        <a href="/favorites" class="btn btn-ghost btn-sm">View All</a>
+      </div>
+      <div class="empty-state" style="padding:var(--space-6) var(--space-4);">
+        <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:40px;height:40px;">
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+        </svg>
+        <p class="text-sm text-muted" style="margin:0;">Heart images to save them here.</p>
+      </div>
+    </div>
+
+    <!-- Collections Summary -->
+    <div class="card">
+      <div class="card-header">
+        <h4 class="card-title">Collections</h4>
+        <a href="/collections" class="btn btn-ghost btn-sm">View All</a>
+      </div>
+      <div class="empty-state" style="padding:var(--space-6) var(--space-4);">
+        <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:40px;height:40px;">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+        </svg>
+        <p class="text-sm text-muted" style="margin:0;">Create collections to organize your work.</p>
+        <a href="/collections" class="btn btn-secondary btn-sm" style="margin-top:var(--space-3);">Create Collection</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Responsive override for two-column layout -->
+<style>
+  @media (max-width: 1024px) {
+    [style*="grid-template-columns:1fr 360px"] {
+      grid-template-columns: 1fr !important;
+    }
+  }
+  @media (max-width: 768px) {
+    [style*="grid-template-columns:1fr 360px"] {
+      grid-template-columns: 1fr !important;
+    }
+    .grid-4 { grid-template-columns: repeat(2, 1fr) !important; }
+  }
+  @media (max-width: 480px) {
+    .grid-4 { grid-template-columns: 1fr !important; }
+  }
+</style>
+{% endblock %}

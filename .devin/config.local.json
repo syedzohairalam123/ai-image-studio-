@@ -1,16 +1,17 @@
 {
   "permissions": {
     "allow": [
-      "Exec(git status)",
+      "Exec(ls)",
+      "Exec(Get-ChildItem)",
+      "Exec(Copy-Item)",
+      "Exec(Test-NetConnection)",
       "Exec(curl)",
-      "Exec(Accept)",
-      "Exec(gh)",
-      "Exec(git remote)",
-      "Exec(git fetch)",
-      "Exec(git add)",
-      "Exec(git commit)",
-      "Exec(git branch)",
-      "Exec(git push)"
+      "Exec(Invoke-WebRequest)",
+      "Exec(New-Object)",
+      "Exec(email=\"test@example.com\")",
+      "Exec(password=\"TestPass123\"})",
+      "Exec($genResponse.Content)",
+      "Exec(($genResponse.Content)"
     ]
   }
 }
