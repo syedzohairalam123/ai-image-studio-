@@ -149,8 +149,15 @@ def get_image_thumbnail(image_id):
     if not is_owner and not is_public:
         return jsonify({"error": "Access denied"}), 403
 
-    thumb_path = Path(image.thumb_path) if image.thumb_path else Path(image.file_path)
-    if not thumb_path.exists():
+    # Try thumbnail path first, fallback to main image
+    thumb_path = None
+    if image.thumb_path:
+        thumb_path = Path(image.thumb_path)
+        if not thumb_path.exists():
+            thumb_path = None
+    
+    # Fallback to main image file
+    if not thumb_path:
         thumb_path = Path(image.file_path)
 
     if not thumb_path.exists():
