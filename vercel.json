@@ -1,14 +1,6 @@
 {
-  "builds": [
-    {
-      "src": "run.py",
-      "use": "@vercel/python"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "run.py"
-    }
-  ]
+  "buildCommand": null,
+  "devCommand": null,
+  "installCommand": null,
+  "framework": null
 }
