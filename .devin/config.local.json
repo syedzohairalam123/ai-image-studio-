@@ -11,7 +11,11 @@
       "Exec(email=\"test@example.com\")",
       "Exec(password=\"TestPass123\"})",
       "Exec($genResponse.Content)",
-      "Exec(($genResponse.Content)"
+      "Exec(($genResponse.Content)",
+      "Exec(git status)",
+      "Exec(git diff)",
+      "Exec(git log)",
+      "Exec(git add)"
     ]
   }
 }
