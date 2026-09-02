@@ -2,7 +2,7 @@
 name = "ai-image-studio"
 version = "1.0.0"
 description = "AI Image Studio Flask Application"
-requires-python = ">=3.8"
+requires-python = ">=3.12"
 dependencies = [
     "Flask==3.1.1",
     "Flask-SQLAlchemy==3.1.1",

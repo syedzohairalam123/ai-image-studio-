@@ -2,5 +2,16 @@
   "buildCommand": null,
   "devCommand": null,
   "installCommand": null,
-  "framework": null
+  "framework": null,
+  "outputDirectory": "instance",
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/index.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/api/index.py"
+    }
+  ]
 }
