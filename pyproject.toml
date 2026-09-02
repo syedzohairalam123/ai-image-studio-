@@ -22,8 +22,9 @@ dependencies = [
     "qrcode[pil]>=7.4",
 ]
 
-[tool.setuptools.packages.find]
-include = []
+[tool.setuptools]
+packages = []
+py-modules = []
 
 [tool.vercel]
 entrypoint = "run:app"
