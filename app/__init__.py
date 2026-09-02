@@ -103,7 +103,11 @@ def _check_rate_limit():
 def create_app(config_class=None):
     """Create and configure the Flask application."""
 
-    flask_app = Flask(__name__)
+    # On Vercel the filesystem under /var/task is read-only.  Point the
+    # instance path (where Flask-SQLAlchemy may try to create folders) to
+    # /tmp, which is the only writable location in a serverless function.
+    _instance_path = "/tmp/instance" if os.environ.get("VERCEL") else None
+    flask_app = Flask(__name__, instance_path=_instance_path)
 
     # Load configuration
     if config_class:
