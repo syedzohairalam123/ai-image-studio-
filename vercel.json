@@ -1,17 +1,16 @@
 {
-  "buildCommand": null,
-  "devCommand": null,
-  "installCommand": "pip install -r requirements.txt",
-  "framework": null,
-  "outputDirectory": "instance",
-  "routes": [
+  "version": 2,
+  "builds": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/index.py"
-    },
+      "src": "api/index.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
     {
       "src": "/(.*)",
       "dest": "/api/index.py"
     }
-  ]
+  ],
+  "installCommand": "pip install -r requirements.txt"
 }

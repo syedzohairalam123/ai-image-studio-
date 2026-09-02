@@ -15,7 +15,8 @@
       "Exec(git status)",
       "Exec(git diff)",
       "Exec(git log)",
-      "Exec(git add)"
+      "Exec(git add)",
+      "Exec(git commit)"
     ]
   }
 }
