@@ -25,6 +25,3 @@ dependencies = [
 [tool.setuptools]
 packages = []
 py-modules = []
-
-[tool.vercel]
-entrypoint = "run:app"

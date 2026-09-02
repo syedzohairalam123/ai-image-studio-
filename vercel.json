@@ -7,17 +7,12 @@
       "config": {
         "maxDuration": 30,
         "includeFiles": [
-          "app/**",
-          "requirements.txt"
+          "app/**"
         ]
       }
     }
   ],
   "routes": [
-    {
-      "src": "/static/(.*)",
-      "dest": "/app/static/$1"
-    },
     {
       "src": "/(.*)",
       "dest": "/api/index.py"
